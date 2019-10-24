@@ -7,6 +7,8 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
 The NAS can be used to store media content. If you want to access them, the system is switched on manually or by wake-on-lan. The system is in operation during this time. But what happens if the client is no longer online? The NAS continues to run and goes into standby - but it usually continues to consume power. 
 This script helps to turn off the system completely and thus save power; since media access usually only has a comparatively short duration. The next time the system is accessed, it is started again manually or by wake-on-lan.
 
+The script also has the advantage that no inflated packages need to be installed on the NAS that could compromise the security or stability of the system. If you want to keep the system as clean as possible and know which features are running on the system, open source and a shell script is just what you need :)
+
 ## Functions
 - Bash Script
 - Use of simple functions from Busy Box
