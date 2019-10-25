@@ -9,6 +9,9 @@ This script helps to turn off the system completely and thus save power; since m
 
 The script also has the advantage that no inflated packages need to be installed on the NAS that could compromise the security or stability of the system. If you want to keep the system as clean as possible and know which features are running on the system, open source and a shell script is just what you need :)
 
+## Basic mechanism
+At definable intervals, all systems of the current network segment (e.g. 10.0.0.x) are checked whether they are reachable. If a system could be detected, this is compared with the list of systems that were defined to avoid a shutdown. If no system could be found, the system continues to attempt to find systems for a defined period of time. If no systems are found during this time, the system is shut down. A named system found resets this check.
+
 ## Functions
 - Bash Script
 - Use of simple functions from Busy Box
