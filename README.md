@@ -44,11 +44,23 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 ## Installation
 
 ### Shell Script
+1. Copy shell script and configuration file to shared volume an your NAS. Remember the path to the shell script (e.g. /volume1/shared_folder)
+2. Rename the default configuration file to autoshutdown.conf or autoshutdown-(hostname).conf where (hostname) is the host name of your NAS. This is helpful if you have multiple NAS where you want to share files but separate configurations.
+3. Proceed with scheduler configuration.
 
 ### Task (Scheduler)
+(here: Synology DSM 6.x)
+1. Login to NAS.
+2. Define a new scheduled task at system start up to execute these commands
+...
+3. Define a second task to be started manually. This task help to deaktivate the shell script if you don't want to be interruped by a system shutdown (e.g. partition cleanup/repair if no client system is online)
+...
+4. Reboot NAS or start first created task manually.
+5. Done ;)
 
 ### IFTTT (Notification)
 
 #### Initialization
 
 #### (temporary) Deactivation
+Run
