@@ -54,6 +54,8 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 2. Define a new scheduled task at system start up to execute these commands
 
 ![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_start_1.png)
+
+![autoshutdown_start_2](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_start_2.png)
 ```
 chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 /volume1/control/syno-autoshutdown/autoshutdown.sh
@@ -61,6 +63,10 @@ chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 
 
 3. Define a second task to be started manually. This task help to deaktivate the shell script if you don't want to be interruped by a system shutdown (e.g. partition cleanup/repair if no client system is online)
+
+![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_stop_1.png)
+
+![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_stop_2.png)
 
 ```
 kill `pidof autoshutdown.sh`
