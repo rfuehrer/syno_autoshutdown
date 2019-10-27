@@ -53,7 +53,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 1. Login to NAS.
 2. Define a new scheduled task at system start up to execute these commands
 
-
+![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_start_1.png)
 ```
 chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 /volume1/control/syno-autoshutdown/autoshutdown.sh
