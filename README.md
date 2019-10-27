@@ -44,7 +44,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 ## Installation
 
 ### Shell Script
-1. Copy shell script and configuration file to shared volume an your NAS. Remember the path to the shell script (e.g. /volume1/control/syno-autoshutdown/)
+1. Copy shell script and configuration file to shared volume (e.g. `control`)an your NAS. Remember the path to the shell script (e.g. `/volume1/control/syno-autoshutdown/`)
 2. Rename the default configuration file to autoshutdown.conf or autoshutdown-(hostname).conf where (hostname) is the host name of your NAS. This is helpful if you have multiple NAS where you want to share files but separate configurations.
 3. Proceed with scheduler configuration.
 
@@ -85,11 +85,11 @@ The script must also be run as root, but the execution can be set to inactive (a
 4. Define the "if" statement
 5. Search for and select "webhooks"
 6. Select "receive a web request"
-7. Name your event (e.g. "syno_event")
+7. Name your event (e.g. `syno_event`)
 8. Define the "that" statement
 9. Search for and select "notifications"
 10. Select "send a notification from the IFTTT app"
-11. Define the message "{{Value1}} (occurred {{OccurredAt}})"
+11. Define the message `{{Value1}} (occurred {{OccurredAt}})`
 12. Click "create action"
 13. Done.
 
