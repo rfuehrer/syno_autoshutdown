@@ -51,7 +51,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 ### Task (Scheduler)
 (here: Synology DSM 6.x)
 1. Login to NAS.
-2. Define a new scheduled task at system start up to execute these commands
+2. Define a new scheduled task at `system start` up to execute these commands
 
 ![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_start_1.png)
 
@@ -60,7 +60,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 /volume1/control/syno-autoshutdown/autoshutdown.sh
 ```
-
+You must run this task/script as root, as some commands are not allowed as users. The task must also be defined to start at boot time so that the execution of the script can be ensured.
 
 3. Define a second task to be started manually. This task help to deaktivate the shell script if you don't want to be interruped by a system shutdown (e.g. partition cleanup/repair if no client system is online)
 
@@ -72,6 +72,7 @@ chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 kill `pidof autoshutdown.sh`
 ```
 
+The script must also be run as root, but the execution can be set to inactive (and thus manual). This task is only used to temporarily terminate a previously executed script or several instances of the script. If the script should be started again, the NAS does not have to be restarted, but the first task can be executed. 
 
 4. Reboot NAS or start first created task manually.
 5. Done ;)
