@@ -44,7 +44,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 ## Installation
 
 ### Shell Script
-1. Copy shell script and configuration file to shared volume an your NAS. Remember the path to the shell script (e.g. /volume1/shared_folder)
+1. Copy shell script and configuration file to shared volume an your NAS. Remember the path to the shell script (e.g. /volume1/control/syno-autoshutdown/)
 2. Rename the default configuration file to autoshutdown.conf or autoshutdown-(hostname).conf where (hostname) is the host name of your NAS. This is helpful if you have multiple NAS where you want to share files but separate configurations.
 3. Proceed with scheduler configuration.
 
@@ -78,6 +78,9 @@ The script must also be run as root, but the execution can be set to inactive (a
 5. Done ;)
 
 ### IFTTT (Notification)
+
+![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
+
 
 #### Initialization
 
