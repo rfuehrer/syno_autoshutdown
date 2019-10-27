@@ -64,7 +64,7 @@ chmod 775 /volume1/control/syno-autoshutdown/autoshutdown.sh
 
 ```
 kill `pidof autoshutdown.sh`
-`
+```
 
 
 4. Reboot NAS or start first created task manually.
