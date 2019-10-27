@@ -79,10 +79,19 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ### IFTTT (Notification)
 
+1. create an account with IFTTT (ifttt.com)
+2. log on to IFTTT at the backend
+3. click profile image and run "create" in menus
+4. define the "if" statement
+5. search for and select "webhooks"
+6. select "receive a web request"
+7. name your event (e.g. "syno_event")
+8. define the "that" statement
+9. search for and select "notifications"
+10. select "send a notification from the IFTTT app"
+11. define the message "{{Value1}} (occurred {{OccurredAt}})"
+12.click "create action"
+13 done.
+
 ![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
 
-
-#### Initialization
-
-#### (temporary) Deactivation
-Run
