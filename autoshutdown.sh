@@ -1,5 +1,4 @@
 #!/bin/sh
-#
 : ' 
 Created by René (https://github.com/rfuehrer)
 
