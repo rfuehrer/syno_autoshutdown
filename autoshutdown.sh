@@ -263,6 +263,14 @@ rm $HASHFILE
 writelog ""
 
 while true; do
+	if [ ! -f "$CONFIGFILE" ]; then
+		# no config file found
+		writelog ""
+		writelog "NO VALID CONFIG FILE FOUND - ABORT!"
+		writelog ""
+		exit 0
+	fi
+
     read_config
     check_pidhash
 	ACTION_DO=1
