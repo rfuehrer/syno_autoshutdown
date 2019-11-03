@@ -1,0 +1,78 @@
+;
+; Synology Autoshutdown configuration file
+;
+; Created by René (https://github.com/rfuehrer)
+; 
+; Licensed to the Apache Software Foundation (ASF) under one
+; or more contributor license agreements.  See the NOTICE file
+; distributed with this work for additional information
+; regarding copyright ownership.  The ASF licenses this file
+; to you under the Apache License, Version 2.0 (the
+; "License"); you may not use this file except in compliance
+; with the License.  You may obtain a copy of the License at
+; 
+;   http://www.apache.org/licenses/LICENSE-2.0
+; 
+; Unless required by applicable law or agreed to in writing,
+; software distributed under the License is distributed on an
+; "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+; KIND, either express or implied.  See the License for the
+; specific language governing permissions and limitations
+; under the License.
+
+; ############################
+, ##    Cliens Settings     ##
+; ############################
+; client (to be checked) information; separated by space
+DS2413_CHECKHOSTS=client_1 client_2 10.0.0.188 192.68.0.5
+
+; ############################
+, ##    Generic Settings    ##
+; ############################
+; cutsomizable hostname of executing NAS (used in notifications)
+MYNAME=SYNOLOGY_HOSTNAME
+; active status of this script (for manual deactivation)
+ACTIVE_STATUS=1
+
+; ############################
+; ##     Sleep Settings     ##
+; ############################
+; note: system will be shut down after (SLEEP_TIMER*SLEEP_MAXLOOP)
+; wating time to check clients again
+SLEEP_TIMER=60
+; maximal count of loops no valid system may offline (=sleep period)
+SLEEP_MAXLOOP=30
+; notification message for sleep period
+SLEEP_MESSAGE="System is going to be shut down..."
+; beep system loudspeaker if system is going to be shut down (3 beeps))
+SHUTDOWN_BEEP=1
+; number of beeps while shutting down
+SHUTDOWN_COUNT_BEEP=3
+
+; ############################
+; ##   IFTTT integration    ##
+; ############################
+; magic key of webhook in IFTTT
+IFTTT_KEY="xxxxxxxxxxxxxx"
+; action name of webhook not notification message
+IFTTT_EVENT="syno_status"
+
+; ############################
+; ##     Grace Settings     ##
+; ############################
+; ????
+GRACE_TIMER=5
+; notification message for grace period
+GRACE_MESSAGE="No valid client online - System is goint to be shut down soon..."
+; beep system loudspeaker if in grace period
+GRACE_BEEP=1
+; number of beeps while shutting down
+GRACE_COUNT_BEEP=3
+
+; ############################
+; ##      Log Sttings       ##
+; ############################
+; maximl number of lines to keep in logfile
+LOGFILE_MAXLINES=0
+; maximal # days to keep log files
+LOGFILE_CLEANUP_DAYS=3
