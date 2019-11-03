@@ -43,7 +43,7 @@ SLEEP_TIMER=60
 ; maximal count of loops no valid system may offline (=sleep period)
 SLEEP_MAXLOOP=30
 ; notification message for sleep period
-SLEEP_MESSAGE="System is going to be shut down..."
+SLEEP_MESSAGE=System is going to be shut down...
 ; beep system loudspeaker if system is going to be shut down (3 beeps))
 SHUTDOWN_BEEP=1
 ; number of beeps while shutting down
@@ -53,21 +53,34 @@ SHUTDOWN_COUNT_BEEP=3
 ; ##   IFTTT integration    ##
 ; ############################
 ; magic key of webhook in IFTTT
-IFTTT_KEY="xxxxxxxxxxxxxx"
+IFTTT_KEY=xxxxxxxxxxxxxx
 ; action name of webhook not notification message
-IFTTT_EVENT="syno_status"
+IFTTT_EVENT=syno_status
 
 ; ############################
 ; ##     Grace Settings     ##
 ; ############################
 ; ????
 GRACE_TIMER=5
-; notification message for grace period
-GRACE_MESSAGE="No valid client online - System is goint to be shut down soon..."
+; notification message for start of grace period
+GRACE_START_MESSAGE=No valid client online - System is goint to be shut down soon...
+; notification message for every notification of grace period
+GRACE_EVERY_MESSAGE=No valid client online - System is goint to be shut down soon...
 ; beep system loudspeaker if in grace period
 GRACE_BEEP=1
 ; number of beeps while shutting down
 GRACE_COUNT_BEEP=3
+
+
+; ############################
+; ##     Notifications      ##
+; ############################
+; notify via IFTTT at grace start event
+NOTIFY_ON_GRACE_START=1
+; notify via IFTTT at grace event
+NOTIFY_ON_GRACE_EVERY=1
+; notify via IFTTT at shutdown
+NOTIFY_ON_SHUTDOWN=1
 
 ; ############################
 ; ##      Log Sttings       ##

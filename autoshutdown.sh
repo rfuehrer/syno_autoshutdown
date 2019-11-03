@@ -123,12 +123,21 @@ read_config() {
 	IFTTT_EVENT=`cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2`
     writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
 
-    SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
-    GRACE_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
+#    SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
+#    GRACE_START_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_START_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
+#    GRACE_EVERY_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_EVERY_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
+    SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2`
+    GRACE_START_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_START_MESSAGE" | cut -d= -f2`
+    GRACE_EVERY_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_EVERY_MESSAGE" | cut -d= -f2`
     SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
     SHUTDOWN_COUNT_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_COUNT_BEEP" | cut -d= -f2`
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
     GRACE_COUNT_BEEP=`cat $CONFIGFILE | grep "^GRACE_COUNT_BEEP" | cut -d= -f2`
+
+	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
+	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
+	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
+
   else
 	    writelog "I" "config - hash confirmed. No action needed."
   fi
@@ -202,8 +211,13 @@ notification()
 	# $2: message
 	if [ "x$1" != "x" ]; then
 		MY_NAME=$1
-		SYNO_STATUS=$2
-		curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $SYNO_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
+		MY_STATUS=$2
+#		writelog "D" "$MY_NAME"
+#		writelog "D" "$MY_STATUS"
+#		writelog "D" "$IFTTT_EVENT"
+#		writelog "D" "$IFTTT_KEY"
+#		writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
+		curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $MY_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
 	fi
 }
 
@@ -348,8 +362,19 @@ while true; do
 		else
 			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 		fi
-		if [ $MAXLOOP_COUNTER -gt $GRACE_TIMER ];then
-			notification "$MYNAME" "$GRACE_MESSAGE"
+		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
+			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
+				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
+					writelog "I" "Sending notification"
+					notification "$MYNAME" "$GRACE_START_MESSAGE"
+				fi
+			else
+				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
+					writelog "I" "Sending notification"
+					notification "$MYNAME" "$GRACE_EVERY_MESSAGE"
+				fi
+			fi
+			
 			if [ $GRACE_BEEP == "1" ];then
 				beeps 1
 			fi
@@ -366,7 +391,9 @@ while true; do
 			if [ $ACTION_DO == 1 ]; then
 				writelog "I" "STATUS: All systems still offline!"
 				writelog "I" "Shutting down this system... Sleep well :)"
-				notification "$MYNAME" "$SLEEP_MESSAGE"
+				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
+					notification "$MYNAME" "$SLEEP_MESSAGE"
+				fi
 				# notification "PROWL" "$MYNAME" $SLEEP_MESSAGE 7000
 
 				if [ $SHUTDOWN_BEEP == "1" ];then
