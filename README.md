@@ -95,3 +95,16 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
 
+## Other files
+
+#### autoshutdown.hash.hash
+
+File containing the hash value of its own running configuration (*.config). This hash value is compared to the hash value of the saved configuration file. If the values differ, the configuration has been changed and the script reads the configuration again in the next cycle.
+
+#### autoshutdown.pid
+
+File that contains the process ID of the running instance of the script.
+
+#### autoshutdown.pidhashash
+
+File containing the hash value of a running shell script. This hash value is compared to the hash value of the saved shell script. If the values differ, the shell script has been changed and the script must be restarted. The running instance is terminated in the next cycle.
