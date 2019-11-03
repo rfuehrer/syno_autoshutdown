@@ -1,4 +1,5 @@
 #!/bin/sh
+#
 : ' 
 Created by René (https://github.com/rfuehrer)
 
@@ -80,47 +81,47 @@ MAXLOOP_COUNTER=0
 read_config() {
   MD5_HASH_SAVED=($(cat $HASHFILE))
   MD5_HASH_CONFIG=($(md5sum $CONFIGFILE| cut -d ' ' -f 1))
-  writelog "config : $HOSTNAME : $CONFIGFILE"
-  writelog "config - actual hash value: $MD5_HASH_CONFIG"
-  writelog "config - saved hash value : $MD5_HASH_SAVED"
+  writelog "I" "config : $HOSTNAME : $CONFIGFILE"
+  writelog "I" "config - actual hash value: $MD5_HASH_CONFIG"
+  writelog "I" "config - saved hash value : $MD5_HASH_SAVED"
 
   if [ "$MD5_HASH_SAVED" != "$MD5_HASH_CONFIG" ]; then
-    writelog "config - modified, reload config"
+    writelog "I" "config - modified, reload config"
 
     # save hash value
     echo $MD5_HASH_CONFIG > $HASHFILE
 
     # reload config
-    writelog "(Re-)Reading config file..."
+    writelog "I" "(Re-)Reading config file..."
   	CHECKHOSTS=`cat $CONFIGFILE | grep "^CHECKHOSTS" | cut -d= -f2`
 	CHECKHOSTS="$CHECKHOSTS "
-    writelog "Set CHECKHOSTS to value $CHECKHOSTS"
+    writelog "I" "Set CHECKHOSTS to value $CHECKHOSTS"
   	
 	MYNAME=`cat $CONFIGFILE | grep "^MYNAME" | cut -d= -f2`
-    writelog "Set MYNAME to value $MYNAME"
+    writelog "I" "Set MYNAME to value $MYNAME"
   	
 	ACTIVE_STATUS=`cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2`
-    writelog "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
+    writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
   	
 	SLEEP_TIMER=`cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2`
-    writelog "Set SLEEP_TIMER to value $SLEEP_TIMER"
+    writelog "I" "Set SLEEP_TIMER to value $SLEEP_TIMER"
     
 	SLEEP_MAXLOOP=`cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2`
-    writelog "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
+    writelog "I" "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
     
 	GRACE_TIMER=`cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2`
-    writelog "Set GRACE_TIMER to value $GRACE_TIMER"
+    writelog "I" "Set GRACE_TIMER to value $GRACE_TIMER"
     
 	LOGFILE_MAXLINES=`cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2`
-    writelog "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
+    writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
 	LOGFILE_CLEANUP_DAYS=`cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2`
-    writelog "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
+    writelog "I" "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
 
 	IFTTT_KEY=`cat $CONFIGFILE | grep "^IFTTT_KEY" | cut -d= -f2`
-    writelog "Set IFTTT_KEY to magic value"
+    writelog "I" "Set IFTTT_KEY to magic value"
 
 	IFTTT_EVENT=`cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2`
-    writelog "Set IFTTT_EVENT to value $IFTTT_EVENT"
+    writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
 
     SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
     GRACE_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
@@ -129,7 +130,7 @@ read_config() {
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
     GRACE_COUNT_BEEP=`cat $CONFIGFILE | grep "^GRACE_COUNT_BEEP" | cut -d= -f2`
   else
-	    writelog "config - hash confirmed. No action needed."
+	    writelog "I" "config - hash confirmed. No action needed."
   fi
 }
 
@@ -137,27 +138,28 @@ check_pidhash(){
     MD5_HASHSCRIPT=($(md5sum $SCRIPTFILE| cut -d ' ' -f 1))
     # first run?
     if [ ! -f $HASHSCRIPTFILE ]; then
-        writelog "script - init new hash"
+        writelog "I" "script - init new hash"
         echo $MD5_HASHSCRIPT > $HASHSCRIPTFILE
     fi
     MD5_HASHSCRIPT_SAVED=($(cat $HASHSCRIPTFILE))
-    writelog "script : $SCRIPTFILE"
-    writelog "script - actual hash value: $MD5_HASHSCRIPT"
-    writelog "script - saved hash value : $MD5_HASHSCRIPT_SAVED"
+    writelog "I" "script : $SCRIPTFILE"
+    writelog "I" "script - actual hash value: $MD5_HASHSCRIPT"
+    writelog "I" "script - saved hash value : $MD5_HASHSCRIPT_SAVED"
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
-        writelog "script - modified, restart script"
+        writelog "I" "script - modified, restart script"
         rm $HASHSCRIPTFILE
         $0 "$@" &
         exit 0
     else
-        writelog "script - hash confirmed. No action needed."
+        writelog "I" "script - hash confirmed. No action needed."
     fi
 }
 
 beeps() {
 	for i in {1..$1}
 	do
+		writelog "I" "Beep."
 		echo 2 > /dev/ttyS1
 		sleep 1
 	done
@@ -170,9 +172,20 @@ beeps() {
 
 writelog()
 {
+	# $1: message level
+	# $2: message content
+	#
+	# message level:
+	# I=information
+	# W=warning
+	# E=error
+
 	NOW=$(date +"%d.%m.%Y %H:%M:%S")
-	echo $NOW [$PID] - $1
-	echo $NOW [$PID] - $1 >>$LOGFILE
+	MSGLEVEL=$1
+	MSG=$2
+
+	echo $NOW [$PID] [$MSGLEVEL] - $MSG
+	echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
 
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate
@@ -199,25 +212,26 @@ notification()
 #	echo "Process already running"
 #fi
 
-writelog ""
-writelog ""
-writelog ""
-writelog ""
-writelog ""
-writelog "################################################################################"
-writelog "#####"
-writelog "##### autoshutdown.sh  for Synology-NAS"
-writelog "#####"
-writelog "##### Version $APP_VERSION, $APP_DATE by $APP_AUTHOR"
-writelog "#####"
-writelog "################################################################################"
-writelog "base directory: $THISDIR"
-writelog "own primary ip: $MY_PRIMARY_IP"
-writelog "scan ip range : $MY_SCAN_RANGE.*"
+writelog "I" ""
+writelog "I" ""
+writelog "I" ""
+writelog "I" ""
+writelog "I" ""
+writelog "W" "################################################################################"
+writelog "I" "#####"
+writelog "W" "##### autoshutdown.sh  for Synology-NAS"
+writelog "I" "#####"
+writelog "I" "##### Version $APP_VERSION, $APP_DATE by $APP_AUTHOR"
+writelog "I" "##### Licensed under APLv2"
+writelog "I" "#####"
+writelog "W" "################################################################################"
+writelog "I" "base directory: $THISDIR"
+writelog "I" "own primary ip: $MY_PRIMARY_IP"
+writelog "I" "scan ip range : $MY_SCAN_RANGE.*"
 
-writelog "Removing old (7 days) logs"
+writelog "I" "Removing old (7 days) logs"
 DUMMY=`find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;`
-writelog ""
+writelog "I" ""
 
 OPT_RESETLOG=0
 OPT_VERBOSE=0
@@ -239,7 +253,7 @@ while true ; do
 done
 
 if [ $OPT_KILLALL -eq 1 ]; then
-	writelog "Terminating myself because of manual kill switch"
+	writelog "I" "Terminating myself because of manual kill switch"
 	echo "Terminating myself because of manual kill switch"
 
 	pkill "autoshutdown"
@@ -259,14 +273,14 @@ fi
 # cleanup hash file (create new configfile)
 rm $HASHFILE
 
-writelog ""
+writelog "I" ""
 
 while true; do
 	if [ ! -f "$CONFIGFILE" ]; then
 		# no config file found
-		writelog ""
-		writelog "NO VALID CONFIG FILE FOUND - ABORT!"
-		writelog ""
+		writelog "I" ""
+		writelog "I" "NO VALID CONFIG FILE FOUND - ABORT!"
+		writelog "I" ""
 		exit 0
 	fi
 
@@ -275,9 +289,9 @@ while true; do
 	ACTION_DO=1
 	FOUND_SYSTEMS=0
 	if [ $ACTIVE_STATUS != "1" ]; then
-		writelog "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
+		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
 	else
-		writelog "Checking systems (loop $MAXLOOP_COUNTER of $SLEEP_MAXLOOP; $SLEEP_TIMER seconds waiting time)"
+		writelog "I" "Checking systems (loop $MAXLOOP_COUNTER of $SLEEP_MAXLOOP; $SLEEP_TIMER seconds waiting time)"
 		#notification "PROWL" "TEST" "$MAXLOOP_COUNTER%20of%20$SLEEP_MAXLOOP" "0"
 
 		# get all online IP addresses
@@ -295,7 +309,7 @@ while true; do
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 					ACTION_DO=0
 					MAXLOOP_COUNTER=0
-					writelog "$DUMMY"
+					writelog "I" "$DUMMY"
 			else
 				#
 				# match marker systems with online systems (IP translated in hostname)
@@ -318,10 +332,10 @@ while true; do
 						else
 							DUMMY="$DUMMY - not decisive"
 						fi
-						writelog "$DUMMY"
+						writelog "I" "$DUMMY"
 					fi
 				else
-					writelog "multiple hostname system [$FOUND_IP] - ignore"
+					writelog "I" "multiple hostname system [$FOUND_IP] - ignore"
 				fi
 			fi
 		done
@@ -330,37 +344,38 @@ while true; do
 		if [ $ACTION_DO == 1 ]; then
 			#(( MAXLOOP_COUNTER = $MAXLOOP_COUNTER + 1 ))
 			MAXLOOP_COUNTER=$((MAXLOOP_COUNTER+1))
+			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		else
-			writelog "$FOUND_SYSTEMS marker systems found. Resetting loop."
+			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 		fi
-		if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
+		if [ $MAXLOOP_COUNTER -gt $GRACE_TIMER ];then
 			notification "$MYNAME" "$GRACE_MESSAGE"
 			if [ $GRACE_BEEP == "1" ];then
-				beeps
+				beeps 1
 			fi
 		fi
-		writelog "#####################################################"
-		writelog "#####                                                "
-		writelog "#####        S H U T D O W N  C O U N T E R          "
-		writelog "#####                                                "
-		writelog "#####                   $MAXLOOP_COUNTER / $SLEEP_MAXLOOP             "
-		writelog "#####                                                "
-		writelog "#####################################################"
+		writelog "I" "#####################################################"
+		writelog "I" "#####                                                "
+		writelog "I" "#####        S H U T D O W N  C O U N T E R          "
+		writelog "I" "#####                                                "
+		writelog "I" "#####                   $MAXLOOP_COUNTER / $SLEEP_MAXLOOP             "
+		writelog "I" "#####                                                "
+		writelog "I" "#####################################################"
 
 		if [ $MAXLOOP_COUNTER -ge $SLEEP_MAXLOOP ]; then
 			if [ $ACTION_DO == 1 ]; then
-				writelog "STATUS: All systems still offline!"
-				writelog "Shutting down this system... Sleep well :)"
+				writelog "I" "STATUS: All systems still offline!"
+				writelog "I" "Shutting down this system... Sleep well :)"
 				notification "$MYNAME" "$SLEEP_MESSAGE"
 				# notification "PROWL" "$MYNAME" $SLEEP_MESSAGE 7000
 
 				if [ $SHUTDOWN_BEEP == "1" ];then
-					beeps
+					beeps 5
 				fi
 				poweroff
 			fi
 		fi
-		writelog "Waiting for next check in $SLEEP_TIMER seconds..."
+		writelog "I" "Waiting for next check in $SLEEP_TIMER seconds..."
 	fi
    sleep $SLEEP_TIMER
 
