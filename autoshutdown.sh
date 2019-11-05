@@ -73,6 +73,7 @@ APP_VERSION=1.6
 APP_DATE=22.10.2019
 APP_AUTHOR=Rene
 
+RUNLOOP_COUNTER=0
 MAXLOOP_COUNTER=0
 
 
@@ -137,6 +138,8 @@ read_config() {
 	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
 	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
 	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
+	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
+	LONGRUN_MESSAGE=`cat $CONFIGFILE | grep "^LONGRUN_MESSAGE" | cut -d= -f2`
 
   else
 	    writelog "I" "config - hash confirmed. No action needed."
@@ -302,6 +305,14 @@ while true; do
     check_pidhash
 	ACTION_DO=1
 	FOUND_SYSTEMS=0
+
+	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
+	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
+	if [ $RUNLOOP_MOD -eq 0 ];then
+		writelog "I" "Sending notification (LONGRUN_MESSAGE)"
+		notification "$MYNAME" "$LONGRUN_MESSAGE"
+	fi
+
 	if [ $ACTIVE_STATUS != "1" ]; then
 		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
 	else
@@ -365,12 +376,12 @@ while true; do
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
-					writelog "I" "Sending notification"
+					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
 					notification "$MYNAME" "$GRACE_START_MESSAGE"
 				fi
 			else
 				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
-					writelog "I" "Sending notification"
+					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
 					notification "$MYNAME" "$GRACE_EVERY_MESSAGE"
 				fi
 			fi
@@ -383,7 +394,8 @@ while true; do
 		writelog "I" "#####                                                "
 		writelog "I" "#####        S H U T D O W N  C O U N T E R          "
 		writelog "I" "#####                                                "
-		writelog "I" "#####                   $MAXLOOP_COUNTER / $SLEEP_MAXLOOP             "
+		writelog "I" "#####                   checks: $RUNLOOP_COUNTER / mod: $RUNLOOP_MOD / max: $NOTIFY_ON_LONGRUN_EVERY             "
+		writelog "I" "#####                   loop: $MAXLOOP_COUNTER / max: $SLEEP_MAXLOOP             "
 		writelog "I" "#####                                                "
 		writelog "I" "#####################################################"
 

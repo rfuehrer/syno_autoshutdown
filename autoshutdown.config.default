@@ -83,6 +83,14 @@ NOTIFY_ON_GRACE_EVERY=1
 NOTIFY_ON_SHUTDOWN=1
 
 ; ############################
+; ##     Long runners       ##
+; ############################
+; notify every n loop about still running system
+NOTIFY_ON_LONGRUN_EVERY=120
+; notification message for still running systems
+LONGRUN_MESSAGE=System still running. Correct?
+
+; ############################
 ; ##      Log Sttings       ##
 ; ############################
 ; maximl number of lines to keep in logfile
