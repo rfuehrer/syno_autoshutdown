@@ -42,12 +42,10 @@ ACTIVE_STATUS=1
 SLEEP_TIMER=60
 ; maximal count of loops no valid system may offline (=sleep period)
 SLEEP_MAXLOOP=30
-; notification message for sleep period
-SLEEP_MESSAGE=System is going to be shut down...
 ; beep system loudspeaker if system is going to be shut down (3 beeps))
 SHUTDOWN_BEEP=1
 ; number of beeps while shutting down
-SHUTDOWN_COUNT_BEEP=3
+SHUTDOWN_BEEP_COUNT=3
 
 ; ############################
 ; ##   IFTTT integration    ##
@@ -62,14 +60,10 @@ IFTTT_EVENT=syno_status
 ; ############################
 ; ????
 GRACE_TIMER=5
-; notification message for start of grace period
-GRACE_START_MESSAGE=No valid client online - System is goint to be shut down soon...
-; notification message for every notification of grace period
-GRACE_EVERY_MESSAGE=No valid client online - System is goint to be shut down soon...
 ; beep system loudspeaker if in grace period
 GRACE_BEEP=1
 ; number of beeps while shutting down
-GRACE_COUNT_BEEP=3
+GRACE_BEEP_COUNT=3
 
 
 ; ############################
@@ -87,8 +81,19 @@ NOTIFY_ON_SHUTDOWN=1
 ; ############################
 ; notify every n loop about still running system
 NOTIFY_ON_LONGRUN_EVERY=120
+
+
+; ############################
+; ##       Messages         ##
+; ############################
+; notification message for sleep period
+MESSAGE_SLEEP=System is going to be shut down...
+; notification message for start of grace period
+MESSAGE_GRACE_START=No valid client online - System is goint to be shut down soon...
+; notification message for every notification of grace period
+MESSAGE_GRACE_EVERY=No valid client online - System is goint to be shut down soon...
 ; notification message for still running systems
-LONGRUN_MESSAGE=System still running. Correct?
+MESSAGE_LONGRUN=System still running. Correct?
 
 ; ############################
 ; ##      Log Sttings       ##

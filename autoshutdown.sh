@@ -124,22 +124,22 @@ read_config() {
 	IFTTT_EVENT=`cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2`
     writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
 
-#    SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
-#    GRACE_START_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_START_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
-#    GRACE_EVERY_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_EVERY_MESSAGE" | cut -d= -f2 | sed -e 's/ /%20/g'`
-    SLEEP_MESSAGE=`cat $CONFIGFILE | grep "^SLEEP_MESSAGE" | cut -d= -f2`
-    GRACE_START_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_START_MESSAGE" | cut -d= -f2`
-    GRACE_EVERY_MESSAGE=`cat $CONFIGFILE | grep "^GRACE_EVERY_MESSAGE" | cut -d= -f2`
+#    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2 | sed -e 's/ /%20/g'`
+#    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2 | sed -e 's/ /%20/g'`
+#    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2 | sed -e 's/ /%20/g'`
+    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
+    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
+    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
     SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
-    SHUTDOWN_COUNT_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_COUNT_BEEP" | cut -d= -f2`
+    SHUTDOWN_BEEP_COUNT=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2`
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
-    GRACE_COUNT_BEEP=`cat $CONFIGFILE | grep "^GRACE_COUNT_BEEP" | cut -d= -f2`
+    GRACE_BEEP_COUNT=`cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2`
 
 	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
 	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
 	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
 	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
-	LONGRUN_MESSAGE=`cat $CONFIGFILE | grep "^LONGRUN_MESSAGE" | cut -d= -f2`
+	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
 
   else
 	    writelog "I" "config - hash confirmed. No action needed."
@@ -309,8 +309,8 @@ while true; do
 	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
 	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
 	if [ $RUNLOOP_MOD -eq 0 ];then
-		writelog "I" "Sending notification (LONGRUN_MESSAGE)"
-		notification "$MYNAME" "$LONGRUN_MESSAGE"
+		writelog "I" "Sending notification (MESSAGE_LONGRUN)"
+		notification "$MYNAME" "$MESSAGE_LONGRUN"
 	fi
 
 	if [ $ACTIVE_STATUS != "1" ]; then
@@ -377,17 +377,17 @@ while true; do
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
-					notification "$MYNAME" "$GRACE_START_MESSAGE"
+					notification "$MYNAME" "$MESSAGE_GRACE_START"
 				fi
 			else
 				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
-					notification "$MYNAME" "$GRACE_EVERY_MESSAGE"
+					notification "$MYNAME" "$MESSAGE_GRACE_EVERY"
 				fi
 			fi
 			
 			if [ $GRACE_BEEP == "1" ];then
-				beeps 1
+				beeps $GRACE_BEEP_COUNT
 			fi
 		fi
 		writelog "I" "#####################################################"
@@ -404,12 +404,12 @@ while true; do
 				writelog "I" "STATUS: All systems still offline!"
 				writelog "I" "Shutting down this system... Sleep well :)"
 				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
-					notification "$MYNAME" "$SLEEP_MESSAGE"
+					notification "$MYNAME" "$MESSAGE_SLEEP"
 				fi
-				# notification "PROWL" "$MYNAME" $SLEEP_MESSAGE 7000
+				# notification "PROWL" "$MYNAME" $MESSAGE_SLEEP 7000
 
 				if [ $SHUTDOWN_BEEP == "1" ];then
-					beeps 5
+					beeps $SHUTDOWN_BEEP_COUNT
 				fi
 				poweroff
 			fi
