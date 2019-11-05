@@ -72,7 +72,7 @@ You must run this task/script as root, as some commands are not allowed as users
 kill `pidof autoshutdown.sh`
 ```
 
-The script must also be run as root, but the execution can be set to inactive (and thus manual). This task is only used to temporarily terminate a previously executed script or several instances of the script. If the script should be started again, the NAS does not have to be restarted, but the first task can be executed. 
+The script must also be run as root, but the execution can be set to inactive (and thus manual). This task is only used to temporarily terminate a previously executed script or several instances of the script. If the autoshutdown script should be started again, the NAS does not have to be restarted, but the first task can be executed. 
 
 4. Reboot NAS or start first created task manually.
 5. Done ;)
@@ -97,7 +97,7 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ## Other files
 
-#### autoshutdown.hash.hash
+#### autoshutdown.hash
 
 File containing the hash value of its own running configuration (*.config). This hash value is compared to the hash value of the saved configuration file. If the values differ, the configuration has been changed and the script reads the configuration again in the next cycle.
 
@@ -105,6 +105,6 @@ File containing the hash value of its own running configuration (*.config). This
 
 File that contains the process ID of the running instance of the script.
 
-#### autoshutdown.pidhashash
+#### autoshutdown.pidhash
 
 File containing the hash value of a running shell script. This hash value is compared to the hash value of the saved shell script. If the values differ, the shell script has been changed and the script must be restarted. The running instance is terminated in the next cycle.
