@@ -1,4 +1,4 @@
-# Syology Autoshutdown
+# Synology Autoshutdown
 
 A simple shell script to shutdown a Synology NAS if no authorized client is online. The main purpose of this script is to reduce power consumption. 
 
