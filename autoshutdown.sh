@@ -102,20 +102,26 @@ read_config() {
     writelog "I" "Set MYNAME to value $MYNAME"
   	
 	ACTIVE_STATUS=`cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2`
+	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
   	
 	SLEEP_TIMER=`cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2`
+	: "${SLEEP_TIMER:=60}"
     writelog "I" "Set SLEEP_TIMER to value $SLEEP_TIMER"
     
 	SLEEP_MAXLOOP=`cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2`
+	: "${SLEEP_MAXLOOP:=30}"
     writelog "I" "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
     
 	GRACE_TIMER=`cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2`
+	: "${GRACE_TIMER:=20}"
     writelog "I" "Set GRACE_TIMER to value $GRACE_TIMER"
     
 	LOGFILE_MAXLINES=`cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2`
+	: "${LOGFILE_MAXLINES:=1000}"
     writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
 	LOGFILE_CLEANUP_DAYS=`cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2`
+	: "${LOGFILE_CLEANUP_DAYS:=7}"
     writelog "I" "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
 
 	IFTTT_KEY=`cat $CONFIGFILE | grep "^IFTTT_KEY" | cut -d= -f2`
@@ -127,19 +133,32 @@ read_config() {
 #    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2 | sed -e 's/ /%20/g'`
 #    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2 | sed -e 's/ /%20/g'`
 #    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2 | sed -e 's/ /%20/g'`
-    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
-    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
-    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
     SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
+	: "${SHUTDOWN_BEEP:=1}"
     SHUTDOWN_BEEP_COUNT=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2`
+	: "${SHUTDOWN_BEEP_COUNT:=5}"
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
+	: "${GRACE_BEEP:=1}"
     GRACE_BEEP_COUNT=`cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2`
+	: "${GRACE_BEEP_COUNT:=1}"
 
 	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
+	: "${NOTIFY_ON_GRACE_START:=1}"
 	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
+	: "${NOTIFY_ON_GRACE_EVERY:=5}"
 	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
+	: "${NOTIFY_ON_SHUTDOWN:=1}"
 	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
+	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
+
+    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
+	: "${MESSAGE_SLEEP:=System will be shut down now...}"
+    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
+	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
+    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
+	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
 	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
+	: "${MESSAGE_GRACE_START:=System is running for a long time...}"
 
   else
 	    writelog "I" "config - hash confirmed. No action needed."
