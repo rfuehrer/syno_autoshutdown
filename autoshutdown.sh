@@ -212,15 +212,25 @@ notification()
 {
 	# $1: system (myname)
 	# $2: message
-	if [ "x$1" != "x" ]; then
-		MY_NAME=$1
-		MY_STATUS=$2
-#		writelog "D" "$MY_NAME"
-#		writelog "D" "$MY_STATUS"
-#		writelog "D" "$IFTTT_EVENT"
-#		writelog "D" "$IFTTT_KEY"
-#		writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
-		curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $MY_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
+	if [ "x$IFTTT_KEY" != "x" ]; then
+		if [ "x$IFTTT_EVENT" != "x" ]; then
+			if [ "x$1" != "x" ]; then
+				MY_NAME=$1
+				MY_STATUS=$2
+#				writelog "D" "$MY_NAME"
+#				writelog "D" "$MY_STATUS"
+#				writelog "D" "$IFTTT_EVENT"
+#				writelog "D" "$IFTTT_KEY"
+#				writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
+				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $MY_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
+			else
+				writelog "E" "No notification message stated. Notification aborted."
+			fi
+		else
+			writelog "E" "No notification event name stated. Notification aborted."
+		fi
+	else
+		writelog "E" "No notification magic key stated. Notification aborted."
 	fi
 }
 
