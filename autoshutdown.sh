@@ -334,6 +334,7 @@ while true; do
     check_pidhash
 	ACTION_DO=1
 	FOUND_SYSTEMS=0
+	VALID_MARKER_SYSTEMS_LIST=""
 
 	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
 	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
@@ -359,6 +360,7 @@ while true; do
 			# space is important to find this IP (CHECKHOSTS has an additional space at end)
 			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					DUMMY="System (IP)"
+					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
 					DUMMY="$DUMMY [$FOUND_IP] - valid marker system"
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 					ACTION_DO=0
@@ -379,6 +381,7 @@ while true; do
 						FOUND_SYS=`echo $FOUND_SYS | tr '[A-Z]' '[a-z]'`
 						DUMMY="System '$FOUND_SYS' "
 						if grep -q "$FOUND_SYS" <<< "$CHECKHOSTS" ; then
+							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
 							DUMMY="$DUMMY [$FOUND_IP] - valid marker system"
 							FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 							ACTION_DO=0
@@ -401,6 +404,11 @@ while true; do
 			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		else
 			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
+			### Trim whitespaces ###
+			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
+			# replace spaces with ", "
+			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
+			writelog "I" "Found systems are: $VALID_MARKER_SYSTEMS_LIST"
 		fi
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
