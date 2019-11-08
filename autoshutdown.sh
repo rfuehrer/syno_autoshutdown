@@ -347,6 +347,8 @@ while true; do
 	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
 	if [ $RUNLOOP_MOD -eq 0 ];then
 		writelog "I" "Sending notification (MESSAGE_LONGRUN)"
+
+		MESSAGE_LONGRUN=$(replace_placeholder "$MESSAGE_LONGRUN")
 		notification "$MYNAME" "$MESSAGE_LONGRUN"
 	fi
 
@@ -423,11 +425,15 @@ while true; do
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
+					
+					MESSAGE_GRACE_START=$(replace_placeholder "$MESSAGE_GRACE_START")
 					notification "$MYNAME" "$MESSAGE_GRACE_START"
 				fi
 			else
 				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
+
+					MESSAGE_GRACE_EVERY=$(replace_placeholder "$MESSAGE_GRACE_EVERY")
 					notification "$MYNAME" "$MESSAGE_GRACE_EVERY"
 				fi
 			fi
@@ -450,6 +456,8 @@ while true; do
 				writelog "I" "STATUS: All systems still offline!"
 				writelog "I" "Shutting down this system... Sleep well :)"
 				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
+
+					MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
 					notification "$MYNAME" "$MESSAGE_SLEEP"
 				fi
 				# notification "PROWL" "$MYNAME" $MESSAGE_SLEEP 7000
