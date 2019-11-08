@@ -201,6 +201,13 @@ beeps() {
 #  echo 2 > /dev/ttyS1
 }
 
+replace_placeholder()
+{
+	local retvar="$1"
+	retvar=${retvar//#VALID_MARKER_SYSTEMS_LIST#/$VALID_MARKER_SYSTEMS_LIST}
+	echo "$retvar"
+}
+
 writelog()
 {
 	# $1: message level
@@ -408,7 +415,9 @@ while true; do
 			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
 			# replace spaces with ", "
 			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
-			writelog "I" "Found systems are: $VALID_MARKER_SYSTEMS_LIST"
+
+			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
+			writelog "I" "$RETURN_VAR"
 		fi
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
