@@ -50,7 +50,8 @@ PID=$BASHPID
 
 MY_PRIMARY_IP=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
 MY_SCAN_RANGE=`echo $MY_PRIMARY_IP | cut -d. -f-3`
-
+MY_START_TIME=$(date +"%d.%m.%Y %H:%M:%S")
+MY_HOSTNAME=`hostname`
 
 # ------- DO NOT EDIT BELOW THIS LINE -------
 SCRIPTFILE=`basename "$0"`
@@ -82,12 +83,12 @@ MAXLOOP_COUNTER=0
 read_config() {
   MD5_HASH_SAVED=($(cat $HASHFILE))
   MD5_HASH_CONFIG=($(md5sum $CONFIGFILE| cut -d ' ' -f 1))
-  writelog "I" "config : $HOSTNAME : $CONFIGFILE"
-  writelog "I" "config - actual hash value: $MD5_HASH_CONFIG"
-  writelog "I" "config - saved hash value : $MD5_HASH_SAVED"
+  writelog "I" "Config hash : $HOSTNAME : $CONFIGFILE"
+  writelog "I" "Config hash - actual hash value: $MD5_HASH_CONFIG"
+  writelog "I" "Config hash - saved hash value : $MD5_HASH_SAVED"
 
   if [ "$MD5_HASH_SAVED" != "$MD5_HASH_CONFIG" ]; then
-    writelog "I" "config - modified, reload config"
+    writelog "I" "Config hash - config modified, reload config"
 
     # save hash value
     echo $MD5_HASH_CONFIG > $HASHFILE
@@ -102,25 +103,31 @@ read_config() {
     writelog "I" "Set MYNAME to value $MYNAME"
   	
 	ACTIVE_STATUS=`cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
   	
 	SLEEP_TIMER=`cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${SLEEP_TIMER:=60}"
     writelog "I" "Set SLEEP_TIMER to value $SLEEP_TIMER"
     
 	SLEEP_MAXLOOP=`cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${SLEEP_MAXLOOP:=30}"
     writelog "I" "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
     
 	GRACE_TIMER=`cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${GRACE_TIMER:=20}"
     writelog "I" "Set GRACE_TIMER to value $GRACE_TIMER"
     
 	LOGFILE_MAXLINES=`cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${LOGFILE_MAXLINES:=1000}"
     writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
 	LOGFILE_CLEANUP_DAYS=`cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${LOGFILE_CLEANUP_DAYS:=7}"
     writelog "I" "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
 
@@ -134,34 +141,45 @@ read_config() {
 #    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2 | sed -e 's/ /%20/g'`
 #    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2 | sed -e 's/ /%20/g'`
     SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP:=1}"
     SHUTDOWN_BEEP_COUNT=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP_COUNT:=5}"
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${GRACE_BEEP:=1}"
     GRACE_BEEP_COUNT=`cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${GRACE_BEEP_COUNT:=1}"
 
 	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_START:=1}"
 	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_EVERY:=5}"
 	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${NOTIFY_ON_SHUTDOWN:=1}"
 	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
 
     MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${MESSAGE_SLEEP:=System will be shut down now...}"
     MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
     MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
 	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
+	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System is running for a long time...}"
-
   else
-	    writelog "I" "config - hash confirmed. No action needed."
+	    writelog "I" "Config hash - hash value confirmed. No action needed."
   fi
 }
 
@@ -169,21 +187,21 @@ check_pidhash(){
     MD5_HASHSCRIPT=($(md5sum $SCRIPTFILE| cut -d ' ' -f 1))
     # first run?
     if [ ! -f $HASHSCRIPTFILE ]; then
-        writelog "I" "script - init new hash"
+        writelog "I" "Script hash - init new hash"
         echo $MD5_HASHSCRIPT > $HASHSCRIPTFILE
     fi
     MD5_HASHSCRIPT_SAVED=($(cat $HASHSCRIPTFILE))
-    writelog "I" "script : $SCRIPTFILE"
-    writelog "I" "script - actual hash value: $MD5_HASHSCRIPT"
-    writelog "I" "script - saved hash value : $MD5_HASHSCRIPT_SAVED"
+    writelog "I" "Script hash : $SCRIPTFILE"
+    writelog "I" "Script hash - actual hash value: $MD5_HASHSCRIPT"
+    writelog "I" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
-        writelog "I" "script - modified, restart script"
+        writelog "I" "Script hash - script modified, restart script"
         rm $HASHSCRIPTFILE
         $0 "$@" &
         exit 0
     else
-        writelog "I" "script - hash confirmed. No action needed."
+        writelog "I" "Script hash - hash value confirmed. No action needed."
     fi
 }
 
@@ -205,6 +223,12 @@ replace_placeholder()
 {
 	local retvar="$1"
 	retvar=${retvar//#VALID_MARKER_SYSTEMS_LIST#/$VALID_MARKER_SYSTEMS_LIST}
+	retvar=${retvar//#MY_START_TIME#/$MY_START_TIME}
+	retvar=${retvar//#MY_HOSTNAME#/$MY_HOSTNAME}
+	retvar=${retvar//#MY_PRIMARY_IP#/$MY_PRIMARY_IP}
+	retvar=${retvar//#RUNLOOP_COUNTER#/$RUNLOOP_COUNTER}
+	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
+	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
 	echo "$retvar"
 }
 
