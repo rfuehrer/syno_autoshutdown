@@ -227,8 +227,23 @@ replace_placeholder()
 	retvar=${retvar//#MY_HOSTNAME#/$MY_HOSTNAME}
 	retvar=${retvar//#MY_PRIMARY_IP#/$MY_PRIMARY_IP}
 	retvar=${retvar//#RUNLOOP_COUNTER#/$RUNLOOP_COUNTER}
+	# loops * sleep_time
 	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
 	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
+
+#	writelog "D" "time: $RUNLOOP_TIME"
+	RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
+#	writelog "D" "secs1: $RUNLOOP_TIME_SECS"
+	RUNLOOP_TIME_DAYS=$((RUNLOOP_TIME_SECS/60/60/24))
+#	writelog "D" "days: $RUNLOOP_TIME_DAYS"
+    RUNLOOP_TIME_HOURS=$((RUNLOOP_TIME_SECS/60/60%24))
+#	writelog "D" "hours: $RUNLOOP_TIME_HOURS"
+    RUNLOOP_TIME_MINS=$((RUNLOOP_TIME_SECS/60%60))
+#	writelog "D" "mins: $RUNLOOP_TIME_MINS"
+    RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
+#	writelog "D" "secs: $RUNLOOP_TIME_SECS"
+	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
+
 	echo "$retvar"
 }
 
@@ -372,8 +387,9 @@ while true; do
 	if [ $RUNLOOP_MOD -eq 0 ];then
 		writelog "I" "Sending notification (MESSAGE_LONGRUN)"
 
-		MESSAGE_LONGRUN=$(replace_placeholder "$MESSAGE_LONGRUN")
-		notification "$MYNAME" "$MESSAGE_LONGRUN"
+		MESSAGE_LONGRUN_NOTIFY=$(replace_placeholder "$MESSAGE_LONGRUN")
+		notification "$MYNAME" "$MESSAGE_LONGRUN_NOTIFY"
+		writelog "I" "Notification sent: $MESSAGE_LONGRUN_NOTIFY"
 	fi
 
 	if [ $ACTIVE_STATUS != "1" ]; then
@@ -450,15 +466,17 @@ while true; do
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
 					
-					MESSAGE_GRACE_START=$(replace_placeholder "$MESSAGE_GRACE_START")
-					notification "$MYNAME" "$MESSAGE_GRACE_START"
+					MESSAGE_GRACE_START_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_START")
+					notification "$MYNAME" "$MESSAGE_GRACE_START_NOTIFY"
+					writelog "I" "Notification sent: $MESSAGE_GRACE_START_NOTIFY"
 				fi
 			else
 				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
 
-					MESSAGE_GRACE_EVERY=$(replace_placeholder "$MESSAGE_GRACE_EVERY")
-					notification "$MYNAME" "$MESSAGE_GRACE_EVERY"
+					MESSAGE_GRACE_EVERY_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_EVERY")
+					notification "$MYNAME" "$MESSAGE_GRACE_EVERY_NOTIFY"
+					writelog "I" "Notification sent: $MESSAGE_GRACE_EVERY_NOTIFY"
 				fi
 			fi
 			
@@ -483,6 +501,7 @@ while true; do
 
 					MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
 					notification "$MYNAME" "$MESSAGE_SLEEP"
+					writelog "I" "Notification sent: $MESSAGE_SLEEP"
 				fi
 				# notification "PROWL" "$MYNAME" $MESSAGE_SLEEP 7000
 
