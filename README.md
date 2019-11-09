@@ -99,6 +99,19 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
 
+## Placeholder variables
+
+Placeholders can be specified for messages in the configuration file. The following placeholders are permitted:
+
+```
+#VALID_MARKER_SYSTEMS_LIST# : List of found marker systems
+#MY_START_TIME# : Start date/time of script
+#MY_HOSTNAME# : Hostname of system running this script
+#MY_PRIMARY_IP# : IP address of host running this script
+#RUNLOOP_COUNTER# : number of executed loops at all
+#RUNLOOP_TIME# : time of executed loops at all (RUNLOOP_COUNTER*SLEEP_TIME)
+```
+
 ## Other files
 
 #### autoshutdown.hash
