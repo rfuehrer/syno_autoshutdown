@@ -81,7 +81,7 @@ The script must also be run as root, but the execution can be set to inactive (a
 4. Reboot NAS or start first created task manually.
 5. Done ;)
 
-### IFTTT (Notification)
+### IFTTT (Notification) (optional)
 
 1. Create an account with IFTTT (ifttt.com)
 2. Log on to IFTTT at the backend
@@ -95,9 +95,13 @@ The script must also be run as root, but the execution can be set to inactive (a
 10. Select "send a notification from the IFTTT app"
 11. Define the message `{{Value1}} (occurred {{OccurredAt}})`
 12. Click "create action"
-13. Done.
+13. Define magic key to config file (IFTTT_KEY) *)
+14. Define name of event (see 7.) to config file (IFTTT_EVENT)
+15. Done.
 
 ![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
+
+*) Your magic key is viewable via ifttt.com -> profile -> my services -> webhooks -> settings -> URL
 
 ## Placeholder variables
 
