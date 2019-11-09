@@ -114,6 +114,7 @@ Placeholders can be specified for messages in the configuration file. The follow
 #MY_PRIMARY_IP# : IP address of host running this script
 #RUNLOOP_COUNTER# : number of executed loops at all
 #RUNLOOP_TIME# : time of executed loops at all (RUNLOOP_COUNTER*SLEEP_TIME)
+#RUNLOOP_TIME_HUMAN# : time of executed loops at all in format d:h:m:s
 ```
 
 ## Other files
