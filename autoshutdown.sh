@@ -79,7 +79,16 @@ MAXLOOP_COUNTER=0
 
 
 # -------------------------------------------
- 
+get_hostname_from_ip(){
+	RET=`arp -a|grep $1|awk '{print $1}'|cut -d. -f1`	
+	echo "$RET"
+}
+
+string_to_lower(){
+	RET=`echo "$1" | tr '[:upper:]' '[:lower:]'`
+	echo $RET
+}
+
 read_config() {
   MD5_HASH_SAVED=($(cat $HASHFILE))
   MD5_HASH_CONFIG=($(md5sum $CONFIGFILE| cut -d ' ' -f 1))
@@ -97,6 +106,7 @@ read_config() {
     writelog "I" "(Re-)Reading config file..."
   	CHECKHOSTS=`cat $CONFIGFILE | grep "^CHECKHOSTS" | cut -d= -f2`
 	CHECKHOSTS="$CHECKHOSTS "
+	CHECKHOSTS=`string_to_lower "$CHECKHOSTS"`
     writelog "I" "Set CHECKHOSTS to value $CHECKHOSTS"
   	
 	MYNAME=`cat $CONFIGFILE | grep "^MYNAME" | cut -d= -f2`
@@ -199,10 +209,6 @@ read_config() {
   fi
 }
 
-get_hostname_from_ip(){
-	RET=`arp -a|grep $1|awk '{print $1}'|cut -d. -f1`	
-	echo "$RET"
-}
 
 check_pidhash(){
     MD5_HASHSCRIPT=($(md5sum $SCRIPTFILE| cut -d ' ' -f 1))
@@ -445,6 +451,8 @@ while true; do
 				# match marker systems with online systems (IP translated in hostname)
 				#
 				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
+				FOUND_SYS=`string_to_lower "$FOUND_SYS"`
+				writelog "D" "FOUND_SYS (lower)=$FOUND_SYS"
 				# find multi hostname systems (e.g. fritzbox)
 				FOUND_SYS_LINES=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}'| wc -l)
 				# check valid ip address (vs. multiple hostnames)
