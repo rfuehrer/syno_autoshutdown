@@ -41,6 +41,7 @@ SLEEP_MAXLOOP=180
 GRACE_TIMER=4
 LOGFILE_MAXLINES=100000
 LOGFILE_CLEANUP_DAYS=7
+DEBUG_MODE=0
 
 CONFIGFILE=autoshutdown.config
 LOGFILE=autoshutdown_$LOG_TIMESTAMP_FORMAT.log
@@ -105,7 +106,12 @@ read_config() {
 	# set default value, if not set by config
 	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
-  	
+
+	DEBUG_MODE=`cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2`
+	# set default value, if not set by config
+	: "${DEBUG_MODE:=0}"
+    writelog "I" "Set DEBUG_MODE to value $DEBUG_MODE"
+
 	SLEEP_TIMER=`cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${SLEEP_TIMER:=60}"
@@ -274,8 +280,11 @@ writelog()
 	MSGLEVEL=$1
 	MSG=$2
 
-	echo $NOW [$PID] [$MSGLEVEL] - $MSG
-	echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
+	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
+		# output if not a "D" message or in debug mode
+		echo $NOW [$PID] [$MSGLEVEL] - $MSG
+		echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
+	fi
 
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate
@@ -295,11 +304,11 @@ notification()
 			if [ "x$1" != "x" ]; then
 				MY_NAME=$1
 				MY_STATUS=$2
-#				writelog "D" "$MY_NAME"
-#				writelog "D" "$MY_STATUS"
-#				writelog "D" "$IFTTT_EVENT"
-#				writelog "D" "$IFTTT_KEY"
-#				writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
+				writelog "D" "$MY_NAME"
+				writelog "D" "$MY_STATUS"
+				writelog "D" "$IFTTT_EVENT"
+				writelog "D" "$IFTTT_KEY"
+				writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
 				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $MY_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
 			else
 				writelog "E" "No notification message stated. Notification aborted."
@@ -455,10 +464,10 @@ while true; do
 		done
 
 		# if variable couldn't be resetted
-		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
-		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
-		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
-		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
+#		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
+#		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
+#		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
+#		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
 		if [ $FOUND_SYSTEMS -ge 1 ]; then
 			#
 			# now systems found
