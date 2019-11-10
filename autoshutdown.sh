@@ -455,20 +455,22 @@ while true; do
 		done
 
 		# if variable couldn't be resetted
-		writelog "D" "$MAXLOOP_COUNTER"
-		writelog "D" "$RUNLOOP_COUNTER"
-		writelog "D" "$NOTIFY_ON_STATUS_CHANGE"
+#		writelog "D" "$MAXLOOP_COUNTER"
+#		writelog "D" "$RUNLOOP_COUNTER"
+#		writelog "D" "$NOTIFY_ON_STATUS_CHANGE"
 		if [ $FOUND_SYSTEMS -gt 0 ]; then
 			#
 			# now systems found
 			#
 			# former status is no system found (resetted loop counter)?
 			if [ $MAXLOOP_COUNTER -eq 0 ]; then
-				writelog "I" "--> status change (not found -> found)"
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
+				writelog "I" "--> status change (not found -> found)"
 					# only send notification after first loop
 					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_VAL)"
 						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_VAL"
+						writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_VAL"
 					fi
 				fi
 			fi
@@ -486,7 +488,9 @@ while true; do
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
 					# only send notification after first loop
 					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_INV)"
 						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_INV"
+						writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_INV"
 					fi
 				fi
 			fi
