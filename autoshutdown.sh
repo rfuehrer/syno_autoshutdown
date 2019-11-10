@@ -455,10 +455,11 @@ while true; do
 		done
 
 		# if variable couldn't be resetted
-#		writelog "D" "$MAXLOOP_COUNTER"
-#		writelog "D" "$RUNLOOP_COUNTER"
-#		writelog "D" "$NOTIFY_ON_STATUS_CHANGE"
-		if [ $FOUND_SYSTEMS -gt 0 ]; then
+#		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
+#		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
+#		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
+#		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
+		if [ $FOUND_SYSTEMS -ge 1 ]; then
 			#
 			# now systems found
 			#
@@ -474,9 +475,16 @@ while true; do
 					fi
 				fi
 			fi
-			# increment counter
-			MAXLOOP_COUNTER=$((MAXLOOP_COUNTER+1))
-			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
+			# reset counter
+			MAXLOOP_COUNTER=0
+			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
+			### Trim whitespaces ###
+			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
+			# replace spaces with ", "
+			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
+
+			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
+			writelog "I" "$RETURN_VAR"
 		else
 			#
 			# now no systems found
@@ -494,16 +502,9 @@ while true; do
 					fi
 				fi
 			fi
-			# reset counter
-			MAXLOOP_COUNTER=0
-			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
-			### Trim whitespaces ###
-			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
-			# replace spaces with ", "
-			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
-
-			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
-			writelog "I" "$RETURN_VAR"
+			# increment counter
+			MAXLOOP_COUNTER=$((MAXLOOP_COUNTER+1))
+			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		fi
 
 
@@ -540,7 +541,7 @@ while true; do
 		writelog "I" "#####################################################"
 
 		if [ $MAXLOOP_COUNTER -ge $SLEEP_MAXLOOP ]; then
-			if [ $ACTION_DO == 1 ]; then
+			if [ $FOUND_SYSTEMS -eq 0 ]; then
 				writelog "I" "STATUS: All systems still offline!"
 				writelog "I" "Shutting down this system... Sleep well :)"
 				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
