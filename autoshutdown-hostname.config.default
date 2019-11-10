@@ -75,6 +75,8 @@ NOTIFY_ON_GRACE_START=1
 NOTIFY_ON_GRACE_EVERY=1
 ; notify via IFTTT at shutdown
 NOTIFY_ON_SHUTDOWN=1
+; notify on status change
+NOTIFY_ON_STATUS_CHANGE=1
 
 ; ############################
 ; ##     Long runners       ##
@@ -94,6 +96,10 @@ MESSAGE_GRACE_START=No valid client online - System is goint to be shut down soo
 MESSAGE_GRACE_EVERY=No valid client online - System is goint to be shut down soon...
 ; notification message for still running systems
 MESSAGE_LONGRUN=System still running. Correct?
+; notification message for state change to found systems
+MESSAGE_STATUS_CHANGE_VAL=Systems found, normal mode started...
+; notification message for state change to no found systems
+MESSAGE_STATUS_CHANGE_INV=No systems found, monitoring mode started!
 
 ; ############################
 ; ##      Log Sttings       ##

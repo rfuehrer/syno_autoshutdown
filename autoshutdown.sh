@@ -69,7 +69,6 @@ LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
-ACTION_DO=1
 APP_VERSION=1.6
 APP_DATE=22.10.2019
 APP_AUTHOR=Rene
@@ -165,6 +164,9 @@ read_config() {
 	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
+	NOTIFY_ON_STATUS_CHANGE=`cat $CONFIGFILE | grep "^NOTIFY_ON_STATUS_CHANGE" | cut -d= -f2`
+	# set default value, if not set by config
+	: "${NOTIFY_ON_STATUS_CHANGE:=1}"
 
     MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
 	# set default value, if not set by config
@@ -178,6 +180,14 @@ read_config() {
 	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System is running for a long time...}"
+
+	MESSAGE_STATUS_CHANGE_VAL=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_VAL" | cut -d= -f2`
+	# set default value, if not set by config
+	: "${MESSAGE_STATUS_CHANGE_VAL:=Systems found, starting normal mode...}"
+	MESSAGE_STATUS_CHANGE_INV=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_INV" | cut -d= -f2`
+	# set default value, if not set by config
+	: "${MESSAGE_STATUS_CHANGE_INV:=No systems found, starting monitoring mode...}"
+
   else
 	    writelog "I" "Config hash - hash value confirmed. No action needed."
   fi
@@ -243,6 +253,9 @@ replace_placeholder()
     RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
 #	writelog "D" "secs: $RUNLOOP_TIME_SECS"
 	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
+
+	SYS_UPTIME_HUMAN=`awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime`
+	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
 
 	echo "$retvar"
 }
@@ -378,7 +391,6 @@ while true; do
 
     read_config
     check_pidhash
-	ACTION_DO=1
 	FOUND_SYSTEMS=0
 	VALID_MARKER_SYSTEMS_LIST=""
 
@@ -412,8 +424,6 @@ while true; do
 					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
 					DUMMY="$DUMMY [$FOUND_IP] - valid marker system"
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
-					ACTION_DO=0
-					MAXLOOP_COUNTER=0
 					writelog "I" "$DUMMY"
 			else
 				#
@@ -433,8 +443,6 @@ while true; do
 							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
 							DUMMY="$DUMMY [$FOUND_IP] - valid marker system"
 							FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
-							ACTION_DO=0
-							MAXLOOP_COUNTER=0
 						else
 							DUMMY="$DUMMY - not decisive"
 						fi
@@ -447,11 +455,43 @@ while true; do
 		done
 
 		# if variable couldn't be resetted
-		if [ $ACTION_DO == 1 ]; then
-			#(( MAXLOOP_COUNTER = $MAXLOOP_COUNTER + 1 ))
+		writelog "D" "$MAXLOOP_COUNTER"
+		writelog "D" "$RUNLOOP_COUNTER"
+		writelog "D" "$NOTIFY_ON_STATUS_CHANGE"
+		if [ $FOUND_SYSTEMS -gt 0 ]; then
+			#
+			# now systems found
+			#
+			# former status is no system found (resetted loop counter)?
+			if [ $MAXLOOP_COUNTER -eq 0 ]; then
+				writelog "I" "--> status change (not found -> found)"
+				if [ $RUNLOOP_COUNTER -gt 1 ]; then
+					# only send notification after first loop
+					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_VAL"
+					fi
+				fi
+			fi
+			# increment counter
 			MAXLOOP_COUNTER=$((MAXLOOP_COUNTER+1))
 			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		else
+			#
+			# now no systems found
+			#
+			# former status is system found (incremented loop counter)
+			if [ $MAXLOOP_COUNTER -ne 0 ]; then
+				# status change detected?
+				writelog "I" "--> status change (found -> not found)"
+				if [ $RUNLOOP_COUNTER -gt 1 ]; then
+					# only send notification after first loop
+					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_INV"
+					fi
+				fi
+			fi
+			# reset counter
+			MAXLOOP_COUNTER=0
 			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 			### Trim whitespaces ###
 			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
@@ -461,6 +501,8 @@ while true; do
 			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
 			writelog "I" "$RETURN_VAR"
 		fi
+
+
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
