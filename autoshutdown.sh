@@ -199,6 +199,11 @@ read_config() {
   fi
 }
 
+get_hostname_from_ip(){
+	RET=`arp -a|grep $1|awk '{print $1}'|cut -d. -f1`	
+	echo "$RET"
+}
+
 check_pidhash(){
     MD5_HASHSCRIPT=($(md5sum $SCRIPTFILE| cut -d ' ' -f 1))
     # first run?
@@ -431,7 +436,8 @@ while true; do
 			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					DUMMY="System (IP)"
 					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
-					DUMMY="$DUMMY [$FOUND_IP] - valid marker system"
+					FOUND_SYS=$(get_hostname_from_ip $FOUND_IP)
+					DUMMY="$DUMMY [$FOUND_IP -> $FOUND_SYS] - valid marker system"
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 					writelog "I" "$DUMMY"
 			else
