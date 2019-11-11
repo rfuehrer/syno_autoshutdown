@@ -79,16 +79,69 @@ MAXLOOP_COUNTER=0
 
 
 # -------------------------------------------
+#######################################
+# Resolve hostname from IP address
+# Globals:
+#   -
+# Arguments:
+#   $1: IP address
+# Returns:
+#   hostname
+#######################################
 get_hostname_from_ip(){
 	RET=`arp -a|grep $1|awk '{print $1}'|cut -d. -f1`	
 	echo "$RET"
 }
 
+#######################################
+# Convert string to lower case
+# Globals:
+#   -
+# Arguments:
+#   $1: string to be converted
+# Returns:
+#   lower case converted string
+#######################################
 string_to_lower(){
 	RET=`echo "$1" | tr '[:upper:]' '[:lower:]'`
 	echo $RET
 }
 
+#######################################
+# Read config file an variables
+# Globals:
+#   $HASHFILE
+#	$CONFIGFILE
+# Arguments:
+#   -
+# Returns:
+#   $CHECKHOSTS
+#	$MYNAME
+#	$ACTIVE_STATUS
+#	$DEBUG_MODE
+#	$SLEEP_TIME
+#	$SLEEP_MAXLOOP
+#	$GRACE_TIMER
+#	$LOGFILE_MAXLINES
+#	$LOGFILE_CLEANUP_DAYS
+#	$IFTTT_KEY
+#	$IFTTT_EVENT
+#	$SHUTDOWN_BEEP
+#	$SHUTDOWN_BEEP_COUNT
+#	$GRACE_BEEP
+#	$GRACE_BEEP_COUNT
+#	$NOTIFY_ON_GRACE_START
+#	$NOTIFY_ON_GRAVE_EVERY
+#	$NOTIFY_ON_SHUTDOWN
+#	$NOTIFY_ON_LONGRUN_EVERY
+#	$NOTIFY_ON_STATUS_CHANGE
+#	$MESSAGE_SLEEP
+#	$MESSAGE_GRACE_START
+#	$MESSAGE_GRACE_EVERY
+#	$MESSAGE_LONGRUN
+#	$MESSAGE_STATUS_CHANGE_VAL
+#	$MESSAGE_STATUS_CHANGE_INV
+#######################################
 read_config() {
   MD5_HASH_SAVED=($(cat $HASHFILE))
   MD5_HASH_CONFIG=($(md5sum $CONFIGFILE| cut -d ' ' -f 1))
@@ -141,6 +194,7 @@ read_config() {
 	# set default value, if not set by config
 	: "${LOGFILE_MAXLINES:=1000}"
     writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
+
 	LOGFILE_CLEANUP_DAYS=`cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${LOGFILE_CLEANUP_DAYS:=7}"
@@ -152,18 +206,18 @@ read_config() {
 	IFTTT_EVENT=`cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2`
     writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
 
-#    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2 | sed -e 's/ /%20/g'`
-#    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2 | sed -e 's/ /%20/g'`
-#    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2 | sed -e 's/ /%20/g'`
     SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP:=1}"
+
     SHUTDOWN_BEEP_COUNT=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP_COUNT:=5}"
+
     GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${GRACE_BEEP:=1}"
+
     GRACE_BEEP_COUNT=`cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${GRACE_BEEP_COUNT:=1}"
@@ -171,15 +225,19 @@ read_config() {
 	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_START:=1}"
+
 	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_EVERY:=5}"
+
 	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_SHUTDOWN:=1}"
+
 	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
+
 	NOTIFY_ON_STATUS_CHANGE=`cat $CONFIGFILE | grep "^NOTIFY_ON_STATUS_CHANGE" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${NOTIFY_ON_STATUS_CHANGE:=1}"
@@ -187,19 +245,23 @@ read_config() {
     MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${MESSAGE_SLEEP:=System will be shut down now...}"
+
     MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
+
     MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
 	# set default value, if not set by config
-	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
+	: "${MESSAGE_GRACE_EVERY:=System will be shut down soon...}"
+
 	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
 	# set default value, if not set by config
-	: "${MESSAGE_GRACE_START:=System is running for a long time...}"
+	: "${MESSAGE_LONGRUN:=System is running for a long time...}"
 
 	MESSAGE_STATUS_CHANGE_VAL=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_VAL" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${MESSAGE_STATUS_CHANGE_VAL:=Systems found, starting normal mode...}"
+
 	MESSAGE_STATUS_CHANGE_INV=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_INV" | cut -d= -f2`
 	# set default value, if not set by config
 	: "${MESSAGE_STATUS_CHANGE_INV:=No systems found, starting monitoring mode...}"
@@ -209,7 +271,17 @@ read_config() {
   fi
 }
 
-
+#######################################
+# Check hash value of pidfile
+# Globals:
+#   $SCRIPTFILE
+#	$HASHSCRIPTFILE
+#	$MD5_HASHSCRIPT_SAVED
+# Arguments:
+#   -
+# Returns:
+#   $MD5_HASHSCRIPT_SAVED
+#######################################
 check_pidhash(){
     MD5_HASHSCRIPT=($(md5sum $SCRIPTFILE| cut -d ' ' -f 1))
     # first run?
@@ -232,18 +304,24 @@ check_pidhash(){
     fi
 }
 
+#######################################
+# Beeps via system speaker of NAS
+# Globals:
+#   -
+# Arguments:
+#   $1: number of beeps
+# Returns:
+#   -
+#######################################
 beeps() {
-	for i in {1..$1}
+	local BEEPS_NUM=$1
+	
+	for i in {1..$BEEPS_NUM}
 	do
 		writelog "I" "Beep."
 		echo 2 > /dev/ttyS1
 		sleep 1
 	done
-#  echo 2 > /dev/ttyS1
-#	sleep 1
-#  echo 2 > /dev/ttyS1
-#	sleep 1
-#  echo 2 > /dev/ttyS1
 }
 
 replace_placeholder()
