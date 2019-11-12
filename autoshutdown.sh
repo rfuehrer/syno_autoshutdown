@@ -21,8 +21,8 @@ specific language governing permissions and limitations
 under the License.
 '
 
-THISDIR=`dirname $0`
-THISDIR=`dirname $(realpath $0)`
+THISDIR=$(dirname $0)
+THISDIR=$(dirname $(realpath $0))
 PARAMS=$1
 
 # ------- DO NOT EDIT BEFORE THIS LINE -------
@@ -34,7 +34,15 @@ PARAMS=$1
 # LOGFILE: name of the logfile
 # LOGFILE_MAXLINES: max line number to keep in log file
 #CHECKHOSTS="192.168.0.2 192.168.0.4 192.168.0.14"
-LOG_TIMESTAMP_FORMAT=$(date +%Y%m%d_%H%M%S)
+
+# ########################################################
+# ########################################################
+# # DEFAULT VARIABLES
+# ########################################################
+# ########################################################
+APP_VERSION=1.8
+APP_DATE=12.11.2019
+APP_AUTHOR=Rene & Rene
 
 SLEEP_TIMER=10
 SLEEP_MAXLOOP=180
@@ -42,19 +50,26 @@ GRACE_TIMER=4
 LOGFILE_MAXLINES=100000
 LOGFILE_CLEANUP_DAYS=7
 DEBUG_MODE=0
+RUNLOOP_COUNTER=0
+MAXLOOP_COUNTER=0
 
 CONFIGFILE=autoshutdown.config
-LOGFILE=autoshutdown_$LOG_TIMESTAMP_FORMAT.log
 HASHFILE=autoshutdown.hash
 HASHSCRIPTFILE=autoshutdown.pidhash
-PID=$BASHPID
 
+# ------- DO NOT EDIT BELOW THIS LINE -------
+# ########################################################
+# ########################################################
+# # GENERATED VARIABLES
+# ########################################################
+# ########################################################
+PID=$BASHPID
+LOG_TIMESTAMP_FORMAT=$(date +%Y%m%d_%H%M%S)
+LOGFILE=autoshutdown_$LOG_TIMESTAMP_FORMAT.log
 MY_PRIMARY_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
 MY_SCAN_RANGE=$(echo $MY_PRIMARY_IP | cut -d. -f-3)
 MY_START_TIME=$(date +"%d.%m.%Y %H:%M:%S")
 MY_HOSTNAME=$(hostname)
-
-# ------- DO NOT EDIT BELOW THIS LINE -------
 SCRIPTFILE=$(basename "$0")
 TEMPDIR=$THISDIR
 if [ "z$MY_HOSTNAME" != "z" ]; then
@@ -69,13 +84,11 @@ LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
-APP_VERSION=1.8
-APP_DATE=12.11.2019
-APP_AUTHOR=Rene & Rene
-
-RUNLOOP_COUNTER=0
-MAXLOOP_COUNTER=0
-
+# ########################################################
+# ########################################################
+# # FUNCTIONS
+# ########################################################
+# ########################################################
 
 # -------------------------------------------
 #######################################
@@ -340,12 +353,13 @@ beeps() {
 replace_placeholder()
 {
 	local retvar="$1"
+	# replace placeholders with variable content
 	retvar=${retvar//#VALID_MARKER_SYSTEMS_LIST#/$VALID_MARKER_SYSTEMS_LIST}
 	retvar=${retvar//#MY_START_TIME#/$MY_START_TIME}
 	retvar=${retvar//#MY_HOSTNAME#/$MY_HOSTNAME}
 	retvar=${retvar//#MY_PRIMARY_IP#/$MY_PRIMARY_IP}
 	retvar=${retvar//#RUNLOOP_COUNTER#/$RUNLOOP_COUNTER}
-	# loops * sleep_time
+	# note: loops * sleep_time
 	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
 	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
 
@@ -380,12 +394,13 @@ writelog()
 	MSGLEVEL=$1
 	MSG=$2
 
+	# only output if NOT a "D" message or in debug mode
 	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
-		# output if not a "D" message or in debug mode
 		echo $NOW [$PID] [$MSGLEVEL] - $MSG
 		echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
 	fi
 
+	- shorten logfile to max line number if not set to zero (0)
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate
 		COUNT_LINES=`wc -l < "$LOGFILE"`
@@ -432,11 +447,18 @@ notification()
 	fi
 }
 
+# ########################################################
+# ########################################################
+# # MAIN PROGRAM
+# ########################################################
+# ########################################################
 
 #if pidof -o %PPID -x $SCRIPTFILE>/dev/null; then
 #	echo "Process already running"
 #fi
 
+# ########################################################
+# # INTRO HEADER
 writelog "I" ""
 writelog "I" ""
 writelog "I" ""
@@ -458,6 +480,8 @@ writelog "I" "Removing old (7 days) logs"
 DUMMY=$(find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;)
 writelog "I" ""
 
+# ########################################################
+# # COMMANDLINE PARAMETER
 OPT_RESETLOG=0
 OPT_VERBOSE=0
 OPT_KILLALL=0
@@ -494,28 +518,30 @@ if [ $OPT_RESETLOG -eq 1 ]; then
 fi
 
 
+# ########################################################
+# # MAIN LOOP
 
 # cleanup hash file (create new configfile)
 rm $HASHFILE
-
 writelog "I" ""
-
+# main loop
 while true; do
 	if [ ! -f "$CONFIGFILE" ]; then
-		# no config file found
+		# no config file found; check every loop to get sure, the function is executable
 		writelog "I" ""
 		writelog "I" "NO VALID CONFIG FILE FOUND - ABORT!"
 		writelog "I" ""
 		exit 0
+	else
+	    read_config
 	fi
-
-    read_config
     check_pidhash
+
 	FOUND_SYSTEMS=0
 	VALID_MARKER_SYSTEMS_LIST=""
-
 	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
 	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
+
 	if [ $RUNLOOP_MOD -eq 0 ];then
 		writelog "I" "Sending notification (MESSAGE_LONGRUN)"
 
@@ -528,17 +554,14 @@ while true; do
 		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
 	else
 		writelog "I" "Checking systems (loop $MAXLOOP_COUNTER of $SLEEP_MAXLOOP; $SLEEP_TIMER seconds waiting time)"
-		#notification "PROWL" "TEST" "$MAXLOOP_COUNTER%20of%20$SLEEP_MAXLOOP" "0"
 
 		# get all online IP addresses
 		FOUND_HOSTS=$(for i in {1..254} ;do (ping $MY_SCAN_RANGE.$i -c 1 -w 5  >/dev/null && echo "$MY_SCAN_RANGE.$i" &) ;done)
 		# search local network
 		for FOUND_IP in $FOUND_HOSTS
 		do
-			#
 			# match marker systems with online systems (IP based)
-			#
-			# space is important to find this IP (CHECKHOSTS has an additional space at end)
+			# note: space is important to find this IP (CHECKHOSTS has an additional space at end)
 			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					DUMMY="System (IP)"
 					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
@@ -547,9 +570,7 @@ while true; do
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 					writelog "I" "$DUMMY"
 			else
-				#
 				# match marker systems with online systems (IP translated in hostname)
-				#
 				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
 				FOUND_SYS=`string_to_lower "$FOUND_SYS"`
 				writelog "D" "FOUND_SYS (lower)=$FOUND_SYS"
@@ -577,16 +598,14 @@ while true; do
 			fi
 		done
 
-		# if variable couldn't be resetted
 		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
 		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
 		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
 		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
+		# if variable couldn't be resetted
 		if [ $FOUND_SYSTEMS -ge 1 ]; then
-			#
 			# now systems found
-			#
-			# former status is no system found (resetted loop counter)?
+			# note: former status is no system found (resetted loop counter)?
 			if [ $MAXLOOP_COUNTER -ne 0 ]; then
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
 				writelog "I" "--> status change (not found -> found)"
@@ -609,10 +628,8 @@ while true; do
 			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
 			writelog "I" "$RETURN_VAR"
 		else
-			#
 			# now no systems found
-			#
-			# former status is system found (incremented loop counter)
+			# note: former status is system found (incremented loop counter)
 			if [ $MAXLOOP_COUNTER -eq 0 ]; then
 				# status change detected?
 				writelog "I" "--> status change (found -> not found)"
@@ -630,30 +647,33 @@ while true; do
 			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		fi
 
-
+		# counter > grace timer?
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
+			# counter = grace timer?
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
+				# send notification
 				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
-					
 					MESSAGE_GRACE_START_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_START")
 					notification "$MYNAME" "$MESSAGE_GRACE_START_NOTIFY"
 					writelog "I" "Notification sent: $MESSAGE_GRACE_START_NOTIFY"
 				fi
 			else
+				# send notification on every ... ?
 				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
-
 					MESSAGE_GRACE_EVERY_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_EVERY")
 					notification "$MYNAME" "$MESSAGE_GRACE_EVERY_NOTIFY"
 					writelog "I" "Notification sent: $MESSAGE_GRACE_EVERY_NOTIFY"
 				fi
 			fi
 			
+			# beep on every loop in grace period?
 			if [ $GRACE_BEEP == "1" ];then
 				beeps $GRACE_BEEP_COUNT
 			fi
 		fi
+		# summary
 		writelog "I" "#####################################################"
 		writelog "I" "#####                                                "
 		writelog "I" "#####        S H U T D O W N  C O U N T E R          "
@@ -663,18 +683,19 @@ while true; do
 		writelog "I" "#####                                                "
 		writelog "I" "#####################################################"
 
+		# check if loop > maxloop?
 		if [ $MAXLOOP_COUNTER -ge $SLEEP_MAXLOOP ]; then
+			# check if still no system found
 			if [ $FOUND_SYSTEMS -eq 0 ]; then
 				writelog "I" "STATUS: All systems still offline!"
 				writelog "I" "Shutting down this system... Sleep well :)"
+				# send notification on system shutdown?
 				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
-
 					MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
 					notification "$MYNAME" "$MESSAGE_SLEEP"
 					writelog "I" "Notification sent: $MESSAGE_SLEEP"
 				fi
-				# notification "PROWL" "$MYNAME" $MESSAGE_SLEEP 7000
-
+				# beep on system shutdown?
 				if [ $SHUTDOWN_BEEP == "1" ];then
 					beeps $SHUTDOWN_BEEP_COUNT
 				fi
@@ -683,6 +704,8 @@ while true; do
 		fi
 		writelog "I" "Waiting for next check in $SLEEP_TIMER seconds..."
 	fi
-   sleep $SLEEP_TIMER
+	
+	# sleep till next loop
+	sleep $SLEEP_TIMER
 
 done;
