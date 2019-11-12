@@ -324,6 +324,20 @@ beeps() {
 	done
 }
 
+#######################################
+# Replace placeholders in message strings
+# Globals:
+#   $VALID_MARKER_SYSTEMS_LIST
+#	$MY_START_TIME
+#	$MY_HOSTNAME
+#	$MY_PRIMARY_IP
+#	$RUNLOOP_COUNTER
+#	$RUNLOOP_TIME
+# Arguments:
+#   $1: string to be converted
+# Returns:
+#   converted string
+#######################################
 replace_placeholder()
 {
 	local retvar="$1"
@@ -336,17 +350,11 @@ replace_placeholder()
 	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
 	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
 
-#	writelog "D" "time: $RUNLOOP_TIME"
 	RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
-#	writelog "D" "secs1: $RUNLOOP_TIME_SECS"
 	RUNLOOP_TIME_DAYS=$((RUNLOOP_TIME_SECS/60/60/24))
-#	writelog "D" "days: $RUNLOOP_TIME_DAYS"
     RUNLOOP_TIME_HOURS=$((RUNLOOP_TIME_SECS/60/60%24))
-#	writelog "D" "hours: $RUNLOOP_TIME_HOURS"
     RUNLOOP_TIME_MINS=$((RUNLOOP_TIME_SECS/60%60))
-#	writelog "D" "mins: $RUNLOOP_TIME_MINS"
     RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
-#	writelog "D" "secs: $RUNLOOP_TIME_SECS"
 	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
 
 	SYS_UPTIME_HUMAN=`awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime`
@@ -355,16 +363,20 @@ replace_placeholder()
 	echo "$retvar"
 }
 
+#######################################
+# Write message to STDOUT and log file
+# Globals:
+#   $DEBUG_MODE
+#	$LOGFILE
+#	$LOGFILE_MAXLINES
+# Arguments:
+#   $1: message level (I, D, W, E)
+#	$2: message
+# Returns:
+#   -
+#######################################
 writelog()
 {
-	# $1: message level
-	# $2: message content
-	#
-	# message level:
-	# I=information
-	# W=warning
-	# E=error
-
 	NOW=$(date +"%d.%m.%Y %H:%M:%S")
 	MSGLEVEL=$1
 	MSG=$2
@@ -384,21 +396,32 @@ writelog()
 	fi
 }
 
+#######################################
+# Send notification to IFTTT
+# Globals:
+#   $IFTTT_KEY
+#	$IFTTT_EVENT
+# Arguments:
+#   $1: Identifier / Host name
+#	$2: Message
+# Returns:
+#   -
+#######################################
 notification()
 {
+	local MY_IDENTIFIER=$1
+	local MY_MESSAGE=$2
 	# $1: system (myname)
 	# $2: message
 	if [ "x$IFTTT_KEY" != "x" ]; then
 		if [ "x$IFTTT_EVENT" != "x" ]; then
-			if [ "x$1" != "x" ]; then
-				MY_NAME=$1
-				MY_STATUS=$2
-				writelog "D" "$MY_NAME"
-				writelog "D" "$MY_STATUS"
-				writelog "D" "$IFTTT_EVENT"
-				writelog "D" "$IFTTT_KEY"
-				writelog "D" "{\"value1\":\"$MY_NAME - $MY_STATUS\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
-				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_NAME - $MY_STATUS\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
+			if [ "x$MY_IDENTIFIER" != "x" ]; then
+				writelog "D" "Notification NAME  : $MY_IDENTIFIER"
+				writelog "D" "Notification STATUS:$MY_MESSAGE"
+				writelog "D" "Notification EVENT :$IFTTT_EVENT"
+				writelog "D" "Notification KEY   : $IFTTT_KEY"
+				writelog "D" "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
+				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
 			else
 				writelog "E" "No notification message stated. Notification aborted."
 			fi
