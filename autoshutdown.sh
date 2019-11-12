@@ -400,7 +400,7 @@ writelog()
 		echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
 	fi
 
-	- shorten logfile to max line number if not set to zero (0)
+	# shorten logfile to max line number if not set to zero (0)
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate
 		COUNT_LINES=`wc -l < "$LOGFILE"`
@@ -674,12 +674,15 @@ while true; do
 			fi
 		fi
 		# summary
+		RUNLOOP_COUNTER_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
+
 		writelog "I" "#####################################################"
 		writelog "I" "#####                                                "
 		writelog "I" "#####        S H U T D O W N  C O U N T E R          "
 		writelog "I" "#####                                                "
-		writelog "I" "#####                   checks: $RUNLOOP_COUNTER / mod: $RUNLOOP_MOD / max: $NOTIFY_ON_LONGRUN_EVERY             "
-		writelog "I" "#####                   loop: $MAXLOOP_COUNTER / max: $SLEEP_MAXLOOP             "
+		writelog "I" "#####                   checks: $RUNLOOP_COUNTER = $RUNLOOP_COUNTER_TIME sec."
+		writelog "I" "#####                   modula: $RUNLOOP_MOD / $NOTIFY_ON_LONGRUN_EVERY"
+		writelog "I" "#####                   loop: $MAXLOOP_COUNTER / max: $SLEEP_MAXLOOP"
 		writelog "I" "#####                                                "
 		writelog "I" "#####################################################"
 
