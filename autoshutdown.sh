@@ -49,17 +49,16 @@ HASHFILE=autoshutdown.hash
 HASHSCRIPTFILE=autoshutdown.pidhash
 PID=$BASHPID
 
-MY_PRIMARY_IP=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
-MY_SCAN_RANGE=`echo $MY_PRIMARY_IP | cut -d. -f-3`
+MY_PRIMARY_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
+MY_SCAN_RANGE=$(echo $MY_PRIMARY_IP | cut -d. -f-3)
 MY_START_TIME=$(date +"%d.%m.%Y %H:%M:%S")
-MY_HOSTNAME=`hostname`
+MY_HOSTNAME=$(hostname)
 
 # ------- DO NOT EDIT BELOW THIS LINE -------
-SCRIPTFILE=`basename "$0"`
+SCRIPTFILE=$(basename "$0")
 TEMPDIR=$THISDIR
-HOSTNAME=`hostname`
-if [ "z$HOSTNAME" != "z" ]; then
-    CONFIGFILE="autoshutdown-$HOSTNAME.config"
+if [ "z$MY_HOSTNAME" != "z" ]; then
+    CONFIGFILE="autoshutdown-$MY_HOSTNAME.config"
 	if [ ! -f "$THISDIR/$CONFIGFILE" ]; then
 		# fallback config (generic)
     	CONFIGFILE="autoshutdown.config"
@@ -70,9 +69,9 @@ LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
-APP_VERSION=1.6
-APP_DATE=22.10.2019
-APP_AUTHOR=Rene
+APP_VERSION=1.8
+APP_DATE=12.11.2019
+APP_AUTHOR=Rene & Rene
 
 RUNLOOP_COUNTER=0
 MAXLOOP_COUNTER=0
@@ -89,7 +88,7 @@ MAXLOOP_COUNTER=0
 #   hostname
 #######################################
 get_hostname_from_ip(){
-	RET=`arp -a|grep $1|awk '{print $1}'|cut -d. -f1`	
+	RET=$(arp -a|grep $1|awk '{print $1}'|cut -d. -f1)
 	echo "$RET"
 }
 
@@ -103,7 +102,7 @@ get_hostname_from_ip(){
 #   lower case converted string
 #######################################
 string_to_lower(){
-	RET=`echo "$1" | tr '[:upper:]' '[:lower:]'`
+	RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 	echo $RET
 }
 
@@ -145,7 +144,7 @@ string_to_lower(){
 read_config() {
   MD5_HASH_SAVED=($(cat $HASHFILE))
   MD5_HASH_CONFIG=($(md5sum $CONFIGFILE| cut -d ' ' -f 1))
-  writelog "I" "Config hash : $HOSTNAME : $CONFIGFILE"
+  writelog "I" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
   writelog "I" "Config hash - actual hash value: $MD5_HASH_CONFIG"
   writelog "I" "Config hash - saved hash value : $MD5_HASH_SAVED"
 
@@ -157,112 +156,112 @@ read_config() {
 
     # reload config
     writelog "I" "(Re-)Reading config file..."
-  	CHECKHOSTS=`cat $CONFIGFILE | grep "^CHECKHOSTS" | cut -d= -f2`
+  	CHECKHOSTS=$(cat $CONFIGFILE | grep "^CHECKHOSTS" | cut -d= -f2)
 	CHECKHOSTS="$CHECKHOSTS "
-	CHECKHOSTS=`string_to_lower "$CHECKHOSTS"`
+	CHECKHOSTS=$(string_to_lower "$CHECKHOSTS")
     writelog "I" "Set CHECKHOSTS to value $CHECKHOSTS"
   	
-	MYNAME=`cat $CONFIGFILE | grep "^MYNAME" | cut -d= -f2`
+	MYNAME=$(cat $CONFIGFILE | grep "^MYNAME" | cut -d= -f2)
     writelog "I" "Set MYNAME to value $MYNAME"
   	
-	ACTIVE_STATUS=`cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2`
+	ACTIVE_STATUS=$(cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
 
-	DEBUG_MODE=`cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2`
+	DEBUG_MODE=$(cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${DEBUG_MODE:=0}"
     writelog "I" "Set DEBUG_MODE to value $DEBUG_MODE"
 
-	SLEEP_TIMER=`cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2`
+	SLEEP_TIMER=$(cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${SLEEP_TIMER:=60}"
     writelog "I" "Set SLEEP_TIMER to value $SLEEP_TIMER"
     
-	SLEEP_MAXLOOP=`cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2`
+	SLEEP_MAXLOOP=$(cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${SLEEP_MAXLOOP:=30}"
     writelog "I" "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
     
-	GRACE_TIMER=`cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2`
+	GRACE_TIMER=$(cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${GRACE_TIMER:=20}"
     writelog "I" "Set GRACE_TIMER to value $GRACE_TIMER"
     
-	LOGFILE_MAXLINES=`cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2`
+	LOGFILE_MAXLINES=$(cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${LOGFILE_MAXLINES:=1000}"
     writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
 
-	LOGFILE_CLEANUP_DAYS=`cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2`
+	LOGFILE_CLEANUP_DAYS=$(cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${LOGFILE_CLEANUP_DAYS:=7}"
     writelog "I" "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
 
-	IFTTT_KEY=`cat $CONFIGFILE | grep "^IFTTT_KEY" | cut -d= -f2`
+	IFTTT_KEY=$(cat $CONFIGFILE | grep "^IFTTT_KEY" | cut -d= -f2)
     writelog "I" "Set IFTTT_KEY to magic value"
 
-	IFTTT_EVENT=`cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2`
+	IFTTT_EVENT=$(cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2)
     writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
 
-    SHUTDOWN_BEEP=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2`
+    SHUTDOWN_BEEP=$(cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP:=1}"
 
-    SHUTDOWN_BEEP_COUNT=`cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2`
+    SHUTDOWN_BEEP_COUNT=$(cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${SHUTDOWN_BEEP_COUNT:=5}"
 
-    GRACE_BEEP=`cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2`
+    GRACE_BEEP=$(cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${GRACE_BEEP:=1}"
 
-    GRACE_BEEP_COUNT=`cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2`
+    GRACE_BEEP_COUNT=$(cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${GRACE_BEEP_COUNT:=1}"
 
-	NOTIFY_ON_GRACE_START=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2`
+	NOTIFY_ON_GRACE_START=$(cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_START:=1}"
 
-	NOTIFY_ON_GRACE_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2`
+	NOTIFY_ON_GRACE_EVERY=$(cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${NOTIFY_ON_GRACE_EVERY:=5}"
 
-	NOTIFY_ON_SHUTDOWN=`cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2`
+	NOTIFY_ON_SHUTDOWN=$(cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${NOTIFY_ON_SHUTDOWN:=1}"
 
-	NOTIFY_ON_LONGRUN_EVERY=`cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2`
+	NOTIFY_ON_LONGRUN_EVERY=$(cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
 
-	NOTIFY_ON_STATUS_CHANGE=`cat $CONFIGFILE | grep "^NOTIFY_ON_STATUS_CHANGE" | cut -d= -f2`
+	NOTIFY_ON_STATUS_CHANGE=$(cat $CONFIGFILE | grep "^NOTIFY_ON_STATUS_CHANGE" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${NOTIFY_ON_STATUS_CHANGE:=1}"
 
-    MESSAGE_SLEEP=`cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2`
+    MESSAGE_SLEEP=$(cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_SLEEP:=System will be shut down now...}"
 
-    MESSAGE_GRACE_START=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2`
+    MESSAGE_GRACE_START=$(cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
 
-    MESSAGE_GRACE_EVERY=`cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2`
+    MESSAGE_GRACE_EVERY=$(cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_GRACE_EVERY:=System will be shut down soon...}"
 
-	MESSAGE_LONGRUN=`cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2`
+	MESSAGE_LONGRUN=$(cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_LONGRUN:=System is running for a long time...}"
 
-	MESSAGE_STATUS_CHANGE_VAL=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_VAL" | cut -d= -f2`
+	MESSAGE_STATUS_CHANGE_VAL=$(cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_VAL" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_STATUS_CHANGE_VAL:=Systems found, starting normal mode...}"
 
-	MESSAGE_STATUS_CHANGE_INV=`cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_INV" | cut -d= -f2`
+	MESSAGE_STATUS_CHANGE_INV=$(cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_INV" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${MESSAGE_STATUS_CHANGE_INV:=No systems found, starting monitoring mode...}"
 
@@ -357,7 +356,7 @@ replace_placeholder()
     RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
 	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
 
-	SYS_UPTIME_HUMAN=`awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime`
+	SYS_UPTIME_HUMAN=$(awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime)
 	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
 
 	echo "$retvar"
@@ -456,7 +455,7 @@ writelog "I" "own primary ip: $MY_PRIMARY_IP"
 writelog "I" "scan ip range : $MY_SCAN_RANGE.*"
 
 writelog "I" "Removing old (7 days) logs"
-DUMMY=`find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;`
+DUMMY=$(find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;)
 writelog "I" ""
 
 OPT_RESETLOG=0
@@ -579,10 +578,10 @@ while true; do
 		done
 
 		# if variable couldn't be resetted
-#		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
-#		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
-#		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
-#		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
+		writelog "D" "FOUND_SYSTEMS=$FOUND_SYSTEMS"
+		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
+		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
+		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
 		if [ $FOUND_SYSTEMS -ge 1 ]; then
 			#
 			# now systems found
