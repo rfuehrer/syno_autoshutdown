@@ -703,6 +703,11 @@ while true; do
 					beeps $SHUTDOWN_BEEP_COUNT
 				fi
 				poweroff
+				writelog "I" "#####################################################"
+				writelog "I" "#####                 G O O D B Y                    "
+				writelog "I" "#####################################################"
+				sleep 60
+				exit 0
 			fi
 		fi
 		writelog "I" "Waiting for next check in $SLEEP_TIMER seconds..."
