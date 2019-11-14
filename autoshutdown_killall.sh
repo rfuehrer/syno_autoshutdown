@@ -1,2 +1,2 @@
 #!/bin/bash
-kill `pidof autoshutdown.sh`
+kill $(pidof autoshutdown.sh)
