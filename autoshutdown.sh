@@ -40,9 +40,9 @@ PARAMS=$1
 # # DEFAULT VARIABLES
 # ########################################################
 # ########################################################
-APP_VERSION=1.8
-APP_DATE=12.11.2019
-APP_AUTHOR=Rene & Rene
+APP_VERSION="1.81"
+APP_DATE="14.11.2019"
+APP_SOURCE="https://github.com/rfuehrer/syno_autoshutdown/"
 
 SLEEP_TIMER=10
 SLEEP_MAXLOOP=180
@@ -403,7 +403,7 @@ writelog()
 	# shorten logfile to max line number if not set to zero (0)
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate
-		COUNT_LINES=`wc -l < "$LOGFILE"`
+		COUNT_LINES=$(wc -l < "$LOGFILE")
 		tail -n $LOGFILE_MAXLINES $LOGFILE >$LOGFILE.temp
 		rm $LOGFILE
 		mv $LOGFILE.temp $LOGFILE
@@ -459,16 +459,12 @@ notification()
 
 # ########################################################
 # # INTRO HEADER
-writelog "I" ""
-writelog "I" ""
-writelog "I" ""
-writelog "I" ""
-writelog "I" ""
 writelog "W" "################################################################################"
 writelog "I" "#####"
 writelog "W" "##### autoshutdown.sh  for Synology-NAS"
 writelog "I" "#####"
-writelog "I" "##### Version $APP_VERSION, $APP_DATE by $APP_AUTHOR"
+writelog "I" "##### Version $APP_VERSION, $APP_DATE"
+writelog "I" "##### $APP_SOURCE"
 writelog "I" "##### Licensed under APLv2"
 writelog "I" "#####"
 writelog "W" "################################################################################"
@@ -517,10 +513,8 @@ if [ $OPT_RESETLOG -eq 1 ]; then
 	OPT_RESETLOG = 0
 fi
 
-
 # ########################################################
 # # MAIN LOOP
-
 # cleanup hash file (create new configfile)
 rm $HASHFILE
 writelog "I" ""
@@ -572,7 +566,7 @@ while true; do
 			else
 				# match marker systems with online systems (IP translated in hostname)
 				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
-				FOUND_SYS=`string_to_lower "$FOUND_SYS"`
+				FOUND_SYS=$(string_to_lower "$FOUND_SYS")
 				writelog "D" "FOUND_SYS (lower)=$FOUND_SYS"
 				# find multi hostname systems (e.g. fritzbox)
 				FOUND_SYS_LINES=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}'| wc -l)
@@ -580,8 +574,8 @@ while true; do
 				if [[ $FOUND_SYS_LINES -eq 1 ]]; then
 						# only accept ssingle-line matches (unique hostnames)
 					if [ ! -z $FOUND_SYS ]; then
-						CHECKHOSTS=`echo $CHECKHOSTS | tr '[A-Z]' '[a-z]'`
-						FOUND_SYS=`echo $FOUND_SYS | tr '[A-Z]' '[a-z]'`
+						CHECKHOSTS=$(echo $CHECKHOSTS | tr '[A-Z]' '[a-z]')
+						FOUND_SYS=$(echo $FOUND_SYS | tr '[A-Z]' '[a-z]')
 						DUMMY="System '$FOUND_SYS' "
 						if grep -q "$FOUND_SYS" <<< "$CHECKHOSTS" ; then
 							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
@@ -621,7 +615,7 @@ while true; do
 			MAXLOOP_COUNTER=0
 			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 			### Trim whitespaces ###
-			VALID_MARKER_SYSTEMS_LIST=`echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//'`
+			VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
 			# replace spaces with ", "
 			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
 
