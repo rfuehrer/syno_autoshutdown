@@ -295,16 +295,19 @@ read_config() {
 #   $MD5_HASHSCRIPT_SAVED
 #######################################
 check_pidhash(){
-    MD5_HASHSCRIPT=$(md5sum $SCRIPTFILE| cut -d ' ' -f 1)
+    local MD5_HASHSCRIPT=$(md5sum $SCRIPTFILE| cut -d ' ' -f 1)
+
     # first run?
     if [ ! -f $HASHSCRIPTFILE ]; then
         writelog "I" "Script hash - init new hash"
         echo $MD5_HASHSCRIPT > $HASHSCRIPTFILE
     fi
+
     MD5_HASHSCRIPT_SAVED=$(cat $HASHSCRIPTFILE)
     writelog "I" "Script hash : $SCRIPTFILE"
-    writelog "I" "Script hash - actual hash value: $MD5_HASHSCRIPT"
-    writelog "I" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
+    writelog "D" "Script hash - actual hash value: $MD5_HASHSCRIPT"
+    writelog "D" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
+	
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
         writelog "I" "Script hash - script modified, restart script"
