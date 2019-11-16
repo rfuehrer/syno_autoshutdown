@@ -84,6 +84,23 @@ LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
+# Color codes
+#Black        0;30     Dark Gray     1;30
+#Red          0;31     Light Red     1;31
+#Green        0;32     Light Green   1;32
+#Brown/Orange 0;33     Yellow        1;33
+#Blue         0;34     Light Blue    1;34
+#Purple       0;35     Light Purple  1;35
+#Cyan         0;36     Light Cyan    1;36
+#Light Gray   0;37     White         1;37
+USE_INTERACTIVE_COLOR=0			# default
+COLOR_ERROR='\033[0;31m'		# red
+COLOR_INFO='\033[0;32m'			# green
+COLOR_WARNING='\033[1;33m' 		# yellow
+COLOR_DEBUG='\033[1;30m'		# gray
+COLOR_PID='\033[1;35m'			# purple
+COLOR_NC='\033[0m' 				# no Color
+
 # ########################################################
 # ########################################################
 # # FUNCTIONS
@@ -182,6 +199,11 @@ read_config() {
 	# set default value, if not set by config
 	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
+
+	USE_INTERACTIVE_COLOR=$(cat $CONFIGFILE | grep "^USE_INTERACTIVE_COLOR" | cut -d= -f2)
+	# set default value, if not set by config
+	: "${USE_INTERACTIVE_COLOR:=1}"
+    writelog "I" "Set USE_INTERACTIVE_COLOR to value $USE_INTERACTIVE_COLOR"
 
 	DEBUG_MODE=$(cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2)
 	# set default value, if not set by config
@@ -402,8 +424,28 @@ writelog()
 
 	# only output if NOT a "D" message or in debug mode
 	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
-		echo $NOW [$PID] [$MSGLEVEL] - $MSG
-		echo $NOW [$PID] [$MSGLEVEL] - $MSG >>$LOGFILE
+		# use color output?
+		if [ $USE_COLOR -eq 1 ];then
+			PID="${COLOR_PID}$PID${COLOR_NC}"
+			case $MSGLEVEL in
+				D)
+					MSGLEVEL="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
+					;;
+				I)
+					MSGLEVEL="${COLOR_INFO}$MSGLEVEL${COLOR_NC}"
+					;;
+				W)
+					MSGLEVEL="${COLOR_WARNING}$MSGLEVEL${COLOR_NC}"
+					;;
+				E)
+					MSGLEVEL="${COLOR_ERROR}$MSGLEVEL${COLOR_NC}"
+					;;
+			esac
+			echo -e "$NOW [$PID] [$MSGLEVEL] - $MSG"
+		else
+			echo "$NOW [$PID] [$MSGLEVEL] - $MSG"
+		fi
+		echo "$NOW [$PID] [$MSGLEVEL] - $MSG" >>$LOGFILE
 	fi
 
 	# shorten logfile to max line number if not set to zero (0)

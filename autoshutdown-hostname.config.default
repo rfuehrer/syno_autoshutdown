@@ -33,6 +33,8 @@ DS2413_CHECKHOSTS=client_1 client_2 10.0.0.188 192.68.0.5
 MYNAME=SYNOLOGY_HOSTNAME
 ; active status of this script (for manual deactivation)
 ACTIVE_STATUS=1
+; use colorful output to interactive session
+USE_INTERACTIVE_COLOR=0
 ; debug mode (outut of debug messages to stdout and log)
 DEBUG_MODE=0
 
