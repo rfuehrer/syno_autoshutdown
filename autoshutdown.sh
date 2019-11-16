@@ -158,12 +158,12 @@ read_config() {
   local MD5_HASH_SAVED=$(cat $HASHFILE)
   local MD5_HASH_CONFIG=$(md5sum $CONFIGFILE| cut -d ' ' -f 1)
   
-  writelog "I" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
+  writelog "D" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
   writelog "D" "Config hash - actual hash value: $MD5_HASH_CONFIG"
   writelog "D" "Config hash - saved hash value : $MD5_HASH_SAVED"
 
   if [ "$MD5_HASH_SAVED" != "$MD5_HASH_CONFIG" ]; then
-    writelog "I" "Config hash - config modified, reload config"
+    writelog "W" "Config hash - config modified, reload config"
 
     # save new hash value
     echo $MD5_HASH_CONFIG > $HASHFILE
@@ -305,13 +305,13 @@ check_pidhash(){
     fi
 
     MD5_HASHSCRIPT_SAVED=$(cat $HASHSCRIPTFILE)
-    writelog "I" "Script hash : $SCRIPTFILE"
+    writelog "D" "Script hash : $SCRIPTFILE"
     writelog "D" "Script hash - actual hash value: $MD5_HASHSCRIPT"
     writelog "D" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
 
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
-        writelog "I" "Script hash - script modified, restart script"
+        writelog "W" "Script hash - script modified, restart script"
         rm $HASHSCRIPTFILE
         $0 "$@" &
         exit 0
