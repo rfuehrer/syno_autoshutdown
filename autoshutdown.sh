@@ -101,7 +101,7 @@ HASHFILE=$THISDIR/$HASHFILE
 #   hostname
 #######################################
 get_hostname_from_ip(){
-	RET=$(arp -a|grep $1|awk '{print $1}'|cut -d. -f1)
+	local RET=$(arp -a|grep $1|awk '{print $1}'|cut -d. -f1)
 	echo "$RET"
 }
 
@@ -115,7 +115,7 @@ get_hostname_from_ip(){
 #   lower case converted string
 #######################################
 string_to_lower(){
-	RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+	local RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 	echo $RET
 }
 
@@ -357,24 +357,25 @@ beeps() {
 replace_placeholder()
 {
 	local retvar="$1"
+
 	# replace placeholders with variable content
 	retvar=${retvar//#VALID_MARKER_SYSTEMS_LIST#/$VALID_MARKER_SYSTEMS_LIST}
 	retvar=${retvar//#MY_START_TIME#/$MY_START_TIME}
 	retvar=${retvar//#MY_HOSTNAME#/$MY_HOSTNAME}
 	retvar=${retvar//#MY_PRIMARY_IP#/$MY_PRIMARY_IP}
 	retvar=${retvar//#RUNLOOP_COUNTER#/$RUNLOOP_COUNTER}
-	# note: loops * sleep_time
-	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
-	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
 
-	RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
-	RUNLOOP_TIME_DAYS=$((RUNLOOP_TIME_SECS/60/60/24))
-    RUNLOOP_TIME_HOURS=$((RUNLOOP_TIME_SECS/60/60%24))
-    RUNLOOP_TIME_MINS=$((RUNLOOP_TIME_SECS/60%60))
-    RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
+	# note: loops * sleep_time
+	local RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
+	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
+	local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
+	local RUNLOOP_TIME_DAYS=$((RUNLOOP_TIME_SECS/60/60/24))
+    local RUNLOOP_TIME_HOURS=$((RUNLOOP_TIME_SECS/60/60%24))
+    local RUNLOOP_TIME_MINS=$((RUNLOOP_TIME_SECS/60%60))
+    local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
 	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
 
-	SYS_UPTIME_HUMAN=$(awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime)
+	local SYS_UPTIME_HUMAN=$(awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime)
 	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
 
 	echo "$retvar"
@@ -386,6 +387,7 @@ replace_placeholder()
 #   $DEBUG_MODE
 #	$LOGFILE
 #	$LOGFILE_MAXLINES
+#	$PID
 # Arguments:
 #   $1: message level (I, D, W, E)
 #	$2: message
@@ -394,9 +396,9 @@ replace_placeholder()
 #######################################
 writelog()
 {
-	NOW=$(date +"%d.%m.%Y %H:%M:%S")
-	MSGLEVEL=$1
-	MSG=$2
+	local NOW=$(date +"%d.%m.%Y %H:%M:%S")
+	local MSGLEVEL=$1
+	local MSG=$2
 
 	# only output if NOT a "D" message or in debug mode
 	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
@@ -429,8 +431,7 @@ notification()
 {
 	local MY_IDENTIFIER=$1
 	local MY_MESSAGE=$2
-	# $1: system (myname)
-	# $2: message
+
 	if [ "x$IFTTT_KEY" != "x" ]; then
 		if [ "x$IFTTT_EVENT" != "x" ]; then
 			if [ "x$MY_IDENTIFIER" != "x" ]; then
