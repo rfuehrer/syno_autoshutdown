@@ -155,16 +155,17 @@ string_to_lower(){
 #	$MESSAGE_STATUS_CHANGE_INV
 #######################################
 read_config() {
-  MD5_HASH_SAVED=$(cat $HASHFILE)
-  MD5_HASH_CONFIG=$(md5sum $CONFIGFILE| cut -d ' ' -f 1)
+  local MD5_HASH_SAVED=$(cat $HASHFILE)
+  local MD5_HASH_CONFIG=$(md5sum $CONFIGFILE| cut -d ' ' -f 1)
+  
   writelog "I" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
-  writelog "I" "Config hash - actual hash value: $MD5_HASH_CONFIG"
-  writelog "I" "Config hash - saved hash value : $MD5_HASH_SAVED"
+  writelog "D" "Config hash - actual hash value: $MD5_HASH_CONFIG"
+  writelog "D" "Config hash - saved hash value : $MD5_HASH_SAVED"
 
   if [ "$MD5_HASH_SAVED" != "$MD5_HASH_CONFIG" ]; then
     writelog "I" "Config hash - config modified, reload config"
 
-    # save hash value
+    # save new hash value
     echo $MD5_HASH_CONFIG > $HASHFILE
 
     # reload config
@@ -307,7 +308,7 @@ check_pidhash(){
     writelog "I" "Script hash : $SCRIPTFILE"
     writelog "D" "Script hash - actual hash value: $MD5_HASHSCRIPT"
     writelog "D" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
-	
+
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
         writelog "I" "Script hash - script modified, restart script"
