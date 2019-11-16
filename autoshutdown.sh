@@ -479,7 +479,6 @@ writelog "I" "scan ip range : $MY_SCAN_RANGE.*"
 
 writelog "I" "Removing old (7 days) logs"
 DUMMY=$(find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;)
-writelog "I" ""
 
 # ########################################################
 # # COMMANDLINE PARAMETER
@@ -522,7 +521,6 @@ fi
 # # MAIN LOOP
 # cleanup hash file (create new configfile)
 rm $HASHFILE
-writelog "I" ""
 # main loop
 while true; do
 	if [ ! -f "$CONFIGFILE" ]; then
