@@ -84,22 +84,8 @@ LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
-# Color codes
-#Black        0;30     Dark Gray     1;30
-#Red          0;31     Light Red     1;31
-#Green        0;32     Light Green   1;32
-#Brown/Orange 0;33     Yellow        1;33
-#Blue         0;34     Light Blue    1;34
-#Purple       0;35     Light Purple  1;35
-#Cyan         0;36     Light Cyan    1;36
-#Light Gray   0;37     White         1;37
-USE_INTERACTIVE_COLOR=0			# default
-COLOR_ERROR='\033[0;31m'		# red
-COLOR_INFO='\033[0;32m'			# green
-COLOR_WARNING='\033[1;33m' 		# yellow
-COLOR_DEBUG='\033[1;30m'		# gray
-COLOR_PID='\033[1;35m'			# purple
-COLOR_NC='\033[0m' 				# no Color
+# reset color
+COLOR_NC="\033[0m"
 
 # ########################################################
 # ########################################################
@@ -200,15 +186,41 @@ read_config() {
 	: "${ACTIVE_STATUS:=1}"
     writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
 
+	DEBUG_MODE=$(cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2)
+	# set default value, if not set by config
+	: "${DEBUG_MODE:=0}"
+    writelog "I" "Set DEBUG_MODE to value $DEBUG_MODE"
+
 	USE_INTERACTIVE_COLOR=$(cat $CONFIGFILE | grep "^USE_INTERACTIVE_COLOR" | cut -d= -f2)
 	# set default value, if not set by config
 	: "${USE_INTERACTIVE_COLOR:=1}"
     writelog "I" "Set USE_INTERACTIVE_COLOR to value $USE_INTERACTIVE_COLOR"
 
-	DEBUG_MODE=$(cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2)
+	COLOR_ERROR=$(cat $CONFIGFILE | grep "^COLOR_ERROR" | cut -d= -f2)
 	# set default value, if not set by config
-	: "${DEBUG_MODE:=0}"
-    writelog "I" "Set DEBUG_MODE to value $DEBUG_MODE"
+#	: "${COLOR_ERROR:=}"
+
+	COLOR_WARNING=$(cat $CONFIGFILE | grep "^COLOR_WARNING" | cut -d= -f2)
+	# set default value, if not set by config
+#	: "${COLOR_WARNING:=""}"
+
+	COLOR_INFO=$(cat $CONFIGFILE | grep "^COLOR_INFO" | cut -d= -f2)
+	# set default value, if not set by config
+#	: "${COLOR_INFO:=}"
+
+	COLOR_DEBUG=$(cat $CONFIGFILE | grep "^COLOR_DEBUG" | cut -d= -f2)
+	# set default value, if not set by config
+#	: "${COLOR_DEBUG:=}"
+
+	COLOR_PID=$(cat $CONFIGFILE | grep "^COLOR_PID" | cut -d= -f2)
+	# set default value, if not set by config
+#	: "${COLOR_PID:=}"
+#    writelog "I" "Set COLOR_ERROR to $COLOR_ERROR this $COLOR_NC"
+#    writelog "I" "Set COLOR_WARNING to $COLOR_WARNING  this $COLOR_NC"
+#    writelog "I" "Set COLOR_INFO to $COLOR_INFO  this $COLOR_NC"
+#    writelog "I" "Set COLOR_DEBUG to $COLOR_DEBUG  this $COLOR_NC"
+#    writelog "I" "Set COLOR_PID to $COLOR_PID this $COLOR_NC"
+
 
 	SLEEP_TIMER=$(cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2)
 	# set default value, if not set by config
@@ -425,23 +437,23 @@ writelog()
 	# only output if NOT a "D" message or in debug mode
 	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
 		# use color output?
-		if [ $USE_COLOR -eq 1 ];then
-			PID="${COLOR_PID}$PID${COLOR_NC}"
+		if [ "$USE_INTERACTIVE_COLOR" == "1" ];then
+			PID_CONSOLE="${COLOR_PID}$PID${COLOR_NC}"
 			case $MSGLEVEL in
 				D)
-					MSGLEVEL="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
+					MSGLEVEL_CONSOLE="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
 					;;
 				I)
-					MSGLEVEL="${COLOR_INFO}$MSGLEVEL${COLOR_NC}"
+					MSGLEVEL_CONSOLE="${COLOR_INFO}$MSGLEVEL${COLOR_NC}"
 					;;
 				W)
-					MSGLEVEL="${COLOR_WARNING}$MSGLEVEL${COLOR_NC}"
+					MSGLEVEL_CONSOLE="${COLOR_WARNING}$MSGLEVEL${COLOR_NC}"
 					;;
 				E)
-					MSGLEVEL="${COLOR_ERROR}$MSGLEVEL${COLOR_NC}"
+					MSGLEVEL_CONSOLE="${COLOR_ERROR}$MSGLEVEL${COLOR_NC}"
 					;;
 			esac
-			echo -e "$NOW [$PID] [$MSGLEVEL] - $MSG"
+			echo -e "$NOW [$PID_CONSOLE] [$MSGLEVEL_CONSOLE] - $MSG"
 		else
 			echo "$NOW [$PID] [$MSGLEVEL] - $MSG"
 		fi
