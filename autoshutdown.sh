@@ -40,8 +40,8 @@ PARAMS=$1
 # # DEFAULT VARIABLES
 # ########################################################
 # ########################################################
-APP_VERSION="1.81"
-APP_DATE="14.11.2019"
+APP_VERSION="2.00"
+APP_DATE="22.11.2019"
 APP_SOURCE="https://github.com/rfuehrer/syno_autoshutdown/"
 
 SLEEP_TIMER=10
@@ -123,6 +123,50 @@ string_to_lower(){
 }
 
 #######################################
+# Read/Init value in config file
+# Globals:
+#   $CONFIGFILE
+# Arguments:
+#   $1: variable name
+#	$2: default value
+#	$3: description of variable
+#	$4: output read value to console(log (0/1))
+# Returns:
+#   -
+#######################################
+read_config_value(){
+	local MY_VAR=$1
+	local MY_DEFAULT=$2
+	local MY_DESCRIPTION=$3
+	local MY_OUTPUT=$4
+
+	local RET
+	RET=""
+
+	if grep -q "^$MY_VAR" $CONFIGFILE
+	then
+		# string found
+		RET=$(cat $CONFIGFILE | grep "^$MY_VAR=" | cut -d= -f2)
+#		: "${ACTIVE_STATUS:=1}"
+		if [ "$RET" == "" ];then
+			writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
+			RET=$MY_DEFAULT
+		fi
+	else
+		# string not found
+		writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
+		echo "" >>$CONFIGFILE
+		echo "; $MY_VAR: $MY_DESCRIPTION" >>$CONFIGFILE
+		echo "$MY_VAR=$MY_DEFAULT" >>$CONFIGFILE
+		RET=$MY_DEFAULT
+	fi
+	# set dynamic variable name to read content
+	eval $MY_VAR=\$RET
+
+	 [ $MY_OUTPUT == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
+}
+
+#######################################
 # Read config file an variables
 # Globals:
 #   $HASHFILE
@@ -173,145 +217,64 @@ read_config() {
 
     # reload config
     writelog "I" "(Re-)Reading config file..."
-  	CHECKHOSTS=$(cat $CONFIGFILE | grep "^CHECKHOSTS" | cut -d= -f2)
+  	
+	read_config_value "CHECKHOSTS" "add-systems-to-monitor seperate-with-spaces" "client (to be checked) information; separated by space" 1
 	CHECKHOSTS="$CHECKHOSTS "
 	CHECKHOSTS=$(string_to_lower "$CHECKHOSTS")
-    writelog "I" "Set CHECKHOSTS to value $CHECKHOSTS"
-  	
-	MYNAME=$(cat $CONFIGFILE | grep "^MYNAME" | cut -d= -f2)
-    writelog "I" "Set MYNAME to value $MYNAME"
-  	
-	ACTIVE_STATUS=$(cat $CONFIGFILE | grep "^ACTIVE_STATUS" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${ACTIVE_STATUS:=1}"
-    writelog "I" "Set ACTIVE_STATUS to value $ACTIVE_STATUS"
 
-	DEBUG_MODE=$(cat $CONFIGFILE | grep "^DEBUG_MODE" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${DEBUG_MODE:=0}"
-    writelog "I" "Set DEBUG_MODE to value $DEBUG_MODE"
+	read_config_value "CHECKHOSTS_DEEPSLEEP" "add-systems-with-deep-sleep-mode" "client (to be checked) with deep sleep mode (special checks); separated by space" 1
+	CHECKHOSTS_DEEPSLEEP="$CHECKHOSTS_DEEPSLEEP "
+	CHECKHOSTS_DEEPSLEEP=$(string_to_lower "$CHECKHOSTS_DEEPSLEEP")
 
-	USE_INTERACTIVE_COLOR=$(cat $CONFIGFILE | grep "^USE_INTERACTIVE_COLOR" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${USE_INTERACTIVE_COLOR:=1}"
-    writelog "I" "Set USE_INTERACTIVE_COLOR to value $USE_INTERACTIVE_COLOR"
+	read_config_value "MYNAME" "$MY_HOSTNAME" "cutsomizable hostname of executing NAS (used in notifications)" 1
+	read_config_value "ACTIVE_STATUS" "1" "active status of this script (for manual deactivation)" 1
+	read_config_value "DEBUG_MODE" "0" "debug mode (outut of debug messages to stdout and log)" 1
+	read_config_value "USE_INTERACTIVE_COLOR" "1" "use color codes in interactive/console mode" 1
 
-	COLOR_ERROR=$(cat $CONFIGFILE | grep "^COLOR_ERROR" | cut -d= -f2)
-	# set default value, if not set by config
-#	: "${COLOR_ERROR:=}"
+	# Color codes
+	#Black        0;30     Dark Gray     1;30
+	#Red          0;31     Light Red     1;31
+	#Green        0;32     Light Green   1;32
+	#Brown/Orange 0;33     Yellow        1;33
+	#Blue         0;34     Light Blue    1;34
+	#Purple       0;35     Light Purple  1;35
+	#Cyan         0;36     Light Cyan    1;36
+	#Light Gray   0;37     White         1;37
+	read_config_value "COLOR_ERROR" "\033[0;31m" "color code for error classification" 0
+	read_config_value "COLOR_WARNING" "\033[0;33m" "color code for warning classification" 0
+	read_config_value "COLOR_INFO" "\033[1;37m" "color code for info classification" 0
+	read_config_value "COLOR_DEBUG" "\033[1;30m" "color code for debug classification" 0
+	read_config_value "COLOR_PID" "\033[0;35m" "color code for process id" 0
 
-	COLOR_WARNING=$(cat $CONFIGFILE | grep "^COLOR_WARNING" | cut -d= -f2)
-	# set default value, if not set by config
-#	: "${COLOR_WARNING:=""}"
-
-	COLOR_INFO=$(cat $CONFIGFILE | grep "^COLOR_INFO" | cut -d= -f2)
-	# set default value, if not set by config
-#	: "${COLOR_INFO:=}"
-
-	COLOR_DEBUG=$(cat $CONFIGFILE | grep "^COLOR_DEBUG" | cut -d= -f2)
-	# set default value, if not set by config
-#	: "${COLOR_DEBUG:=}"
-
-	COLOR_PID=$(cat $CONFIGFILE | grep "^COLOR_PID" | cut -d= -f2)
-	# set default value, if not set by config
-#	: "${COLOR_PID:=}"
-#    writelog "I" "Set COLOR_ERROR to $COLOR_ERROR this $COLOR_NC"
-#    writelog "I" "Set COLOR_WARNING to $COLOR_WARNING  this $COLOR_NC"
-#    writelog "I" "Set COLOR_INFO to $COLOR_INFO  this $COLOR_NC"
-#    writelog "I" "Set COLOR_DEBUG to $COLOR_DEBUG  this $COLOR_NC"
-#    writelog "I" "Set COLOR_PID to $COLOR_PID this $COLOR_NC"
-
-
-	SLEEP_TIMER=$(cat $CONFIGFILE | grep "^SLEEP_TIMER" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${SLEEP_TIMER:=60}"
-    writelog "I" "Set SLEEP_TIMER to value $SLEEP_TIMER"
-    
-	SLEEP_MAXLOOP=$(cat $CONFIGFILE | grep "^SLEEP_MAXLOOP" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${SLEEP_MAXLOOP:=30}"
-    writelog "I" "Set SLEEP_MAXLOOP to value $SLEEP_MAXLOOP"
-    
-	GRACE_TIMER=$(cat $CONFIGFILE | grep "^GRACE_TIMER" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${GRACE_TIMER:=20}"
-    writelog "I" "Set GRACE_TIMER to value $GRACE_TIMER"
-    
-	LOGFILE_MAXLINES=$(cat $CONFIGFILE | grep "^LOGFILE_MAXLINES" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${LOGFILE_MAXLINES:=1000}"
-    writelog "I" "Set LOGFILE_MAXLINES to value $LOGFILE_MAXLINES"
-
-	LOGFILE_CLEANUP_DAYS=$(cat $CONFIGFILE | grep "^LOGFILE_CLEANUP_DAYS" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${LOGFILE_CLEANUP_DAYS:=7}"
-    writelog "I" "Set LOGFILE_CLEANUP_DAYS to value $LOGFILE_CLEANUP_DAYS"
-
-	IFTTT_KEY=$(cat $CONFIGFILE | grep "^IFTTT_KEY" | cut -d= -f2)
-    writelog "I" "Set IFTTT_KEY to magic value"
-
-	IFTTT_EVENT=$(cat $CONFIGFILE | grep "^IFTTT_EVENT" | cut -d= -f2)
-    writelog "I" "Set IFTTT_EVENT to value $IFTTT_EVENT"
-
-    SHUTDOWN_BEEP=$(cat $CONFIGFILE | grep "^SHUTDOWN_BEEP" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${SHUTDOWN_BEEP:=1}"
-
-    SHUTDOWN_BEEP_COUNT=$(cat $CONFIGFILE | grep "^SHUTDOWN_BEEP_COUNT" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${SHUTDOWN_BEEP_COUNT:=5}"
-
-    GRACE_BEEP=$(cat $CONFIGFILE | grep "^GRACE_BEEP" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${GRACE_BEEP:=1}"
-
-    GRACE_BEEP_COUNT=$(cat $CONFIGFILE | grep "^GRACE_BEEP_COUNT" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${GRACE_BEEP_COUNT:=1}"
-
-	NOTIFY_ON_GRACE_START=$(cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_START" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${NOTIFY_ON_GRACE_START:=1}"
-
-	NOTIFY_ON_GRACE_EVERY=$(cat $CONFIGFILE | grep "^NOTIFY_ON_GRACE_EVERY" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${NOTIFY_ON_GRACE_EVERY:=5}"
-
-	NOTIFY_ON_SHUTDOWN=$(cat $CONFIGFILE | grep "^NOTIFY_ON_SHUTDOWN" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${NOTIFY_ON_SHUTDOWN:=1}"
-
-	NOTIFY_ON_LONGRUN_EVERY=$(cat $CONFIGFILE | grep "^NOTIFY_ON_LONGRUN_EVERY" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${NOTIFY_ON_LONGRUN_EVERY:=180}"
-
-	NOTIFY_ON_STATUS_CHANGE=$(cat $CONFIGFILE | grep "^NOTIFY_ON_STATUS_CHANGE" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${NOTIFY_ON_STATUS_CHANGE:=1}"
-
-    MESSAGE_SLEEP=$(cat $CONFIGFILE | grep "^MESSAGE_SLEEP" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_SLEEP:=System will be shut down now...}"
-
-    MESSAGE_GRACE_START=$(cat $CONFIGFILE | grep "^MESSAGE_GRACE_START" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_GRACE_START:=System will be shut down soon...}"
-
-    MESSAGE_GRACE_EVERY=$(cat $CONFIGFILE | grep "^MESSAGE_GRACE_EVERY" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_GRACE_EVERY:=System will be shut down soon...}"
-
-	MESSAGE_LONGRUN=$(cat $CONFIGFILE | grep "^MESSAGE_LONGRUN" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_LONGRUN:=System is running for a long time...}"
-
-	MESSAGE_STATUS_CHANGE_VAL=$(cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_VAL" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_STATUS_CHANGE_VAL:=Systems found, starting normal mode...}"
-
-	MESSAGE_STATUS_CHANGE_INV=$(cat $CONFIGFILE | grep "^MESSAGE_STATUS_CHANGE_INV" | cut -d= -f2)
-	# set default value, if not set by config
-	: "${MESSAGE_STATUS_CHANGE_INV:=No systems found, starting monitoring mode...}"
+	read_config_value "SLEEP_TIMER" 60 "wating time (loop) to check clients again" 1
+	read_config_value "SLEEP_MAXLOOP" 30 "number of max loops" 1
+	read_config_value "GRACE_TIMER" 20 "start grace period after x loops" 1
+	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines" 1
+	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days" 1
+	read_config_value "IFTTT_KEY" "" "IFTTT magic key for webhook notifications" 0
+	read_config_value "IFTTT_EVENT" "" "IFTTT event name for notifications" 1
+	read_config_value "SHUTDOWN_BEEP" 1 "beep system loudspeaker if shutting down (0/1)" 1
+	read_config_value "SHUTDOWN_BEEP_COUNT" 5 "number of beeps at shutdown" 1
+ 	read_config_value "GRACE_BEEP" 1 "beep system loudspeaker if in grace period (0/1)" 1
+	read_config_value "GRACE_BEEP_COUNT" 1 "number of beeps in grace period" 1
+	read_config_value "NOTIFY_ON_GRACE_START" 1 "send notification on start of grace period" 1
+	read_config_value "NOTIFY_ON_GRACE_EVERY" 5 "send notification in grace period" 1
+	read_config_value "NOTIFY_ON_SHUTDOWN" 1 "send notification on shutdown" 1
+	read_config_value "NOTIFY_ON_LONGRUN_EVERY" 180 "send notification if system is running a long time" 1
+	read_config_value "NOTIFY_ON_STATUS_CHANGE" 1 "send niotification if status of connected system changes" 1
+ 	read_config_value "MESSAGE_SLEEP" "System will be shut down now..." "notification message if system is shutting down" 1
+ 	read_config_value "MESSAGE_GRACE_START" "System will be shut down soon..." "notification message if grace periods starts" 1
+  	read_config_value "MESSAGE_GRACE_EVERY" "System will be shut down soon..." "notification message while in grace period" 1
+ 	read_config_value "MESSAGE_LONGRUN" "System is running for a long time..." "notification message if system is running a long time" 1
+ 	read_config_value "MESSAGE_STATUS_CHANGE_VAL" "Systems found, starting normal mode..." "notification message if valid systems are found" 1
+ 	read_config_value "MESSAGE_STATUS_CHANGE_INV" "No systems found, starting monitoring mode..." "notification message if no valid systems are found" 1
+ 	read_config_value "MESSAGE_LAST_SYSTEM_DEEPSLEEP" "Remaining valid system seems to be in deep sleep mode. Continuing checks.." "notification message if remaining system is possible in deep sleep mode" 1
+ 
+	read_config_value "NETWORK_USAGE_INTERFACE" "eth0" "network interface of NAS to be checked (e.g. eth0, eth1, bond0,...)" 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MIN_BYTES" 1000 "Less than x bytes per second for low bandwidth" 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MAX_BYTES" 5000 "More than x bytes per second for high bandwidth" 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage" 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage" 1
 
   else
 	    writelog "I" "Config hash - hash value confirmed. No action needed."
@@ -438,19 +401,19 @@ writelog()
 	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
 		# use color output?
 		if [ "$USE_INTERACTIVE_COLOR" == "1" ];then
-			PID_CONSOLE="${COLOR_PID}$PID${COLOR_NC}"
+			[ "$COLOR_PID" != "" ] && PID_CONSOLE="${COLOR_PID}$PID${COLOR_NC}"
 			case $MSGLEVEL in
 				D)
-					MSGLEVEL_CONSOLE="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
+					[ "$COLOR_DEBUG" != "" ] && MSGLEVEL_CONSOLE="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
 					;;
 				I)
-					MSGLEVEL_CONSOLE="${COLOR_INFO}$MSGLEVEL${COLOR_NC}"
+					[ "$COLOR_INFO" != "" ] && MSGLEVEL_CONSOLE="${COLOR_INFO}$MSGLEVEL${COLOR_NC}"
 					;;
 				W)
-					MSGLEVEL_CONSOLE="${COLOR_WARNING}$MSGLEVEL${COLOR_NC}"
+					[ "$COLOR_WARNING" != "" ] && MSGLEVEL_CONSOLE="${COLOR_WARNING}$MSGLEVEL${COLOR_NC}"
 					;;
 				E)
-					MSGLEVEL_CONSOLE="${COLOR_ERROR}$MSGLEVEL${COLOR_NC}"
+					[ "$COLOR_ERROR" != "" ] && MSGLEVEL_CONSOLE="${COLOR_ERROR}$MSGLEVEL${COLOR_NC}"
 					;;
 			esac
 			echo -e "$NOW [$PID_CONSOLE] [$MSGLEVEL_CONSOLE] - $MSG"
@@ -504,6 +467,105 @@ notification()
 	else
 		writelog "E" "No notification magic key stated. Notification aborted."
 	fi
+}
+
+#######################################
+# Check network usage (to check deep sleep systems)
+# Globals:
+#   $NETWORK_USAGE_INTERFACE
+#	$NETWORK_USAGE_INTERFACE_MIN_BYTES
+#	$NETWORK_USAGE_INTERFACE_MAX_BYTES
+#	$NETWORK_USAGE_INTERFACE_PROBES_POSITIVE
+# Arguments:
+#	-
+# Returns:
+#   0/1 status of usage 
+#######################################
+is_network_in_use() {
+    COUNT_HIGH=0
+    BYTES_DIFF_MAX=0
+    #BYTES=$(ifconfig $NW_DEVICE|grep "TX bytes"|cut -d ":" -f 3|cut -d " " -f 1)
+    BYTES=$(cat /sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes)
+    for i in {0..10}
+    do
+#    while true; do 
+        BYTES_SAVE=$BYTES
+        #BYTES=$(ifconfig $NW_DEVICE|grep "TX bytes"|cut -d ":" -f 3|cut -d " " -f 1)
+        BYTES=$(cat /sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes)
+        BYTES_DIFF=$((BYTES-BYTES_SAVE))
+        DIFF_CODE="NORMAL"
+        if [ $BYTES_DIFF -gt $BYTES_DIFF_MAX ]; then
+            BYTES_DIFF_MAX=$BYTES_DIFF
+        fi
+        if [ $BYTES_DIFF -lt $NETWORK_USAGE_INTERFACE_MIN_BYTES ];then
+            DIFF_CODE="  LOW"
+        fi
+        if [ $BYTES_DIFF -gt $NETWORK_USAGE_INTERFACE_MAX_BYTES ];then
+            DIFF_CODE=" HIGH "
+            COUNT_HIGH=$((COUNT_HIGH+1))
+        fi
+        #echo "$BYTES ($BYTES_DIFF) $DIFF_CODE (max: $BYTES_DIFF_MAX)"
+        #echo "$BYTES ($BYTES_DIFF) $DIFF_CODE (max: $BYTES_DIFF_MAX)" >>/volume1/control/syno_autoshutdown/net.txt
+        sleep 1
+    done
+    if [ $COUNT_HIGH -ge $NETWORK_USAGE_INTERFACE_PROBES_POSITIVE ]; then
+        echo 1
+    else
+        echo 0
+    fi    
+}
+
+#######################################
+# Restart loop if valid systems found
+# Globals:
+#   $FOUND_SYSTEMS
+#	$VALID_MARKER_SYSTEMS_LIST
+# Arguments:
+#	-
+# Returns:
+#   MAXLOOP_COUNTER=0
+#######################################
+restart_loop() {
+	# reset counter
+	MAXLOOP_COUNTER=0
+	writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
+	### Trim whitespaces ###
+	VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
+	# replace spaces with ", "
+	VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
+
+	RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
+	writelog "I" "$RETURN_VAR"
+}
+
+#######################################
+# Check and notify if valid systems are found again
+# Globals:
+#   $MAXLOOP_COUNTER
+#	$RUNLOOP_COUNTER
+#	$NOTIFY_ON_STATUS_CHANGE
+#	$MESSAGE_STATUS_CHANGE_VAL
+# Arguments:
+#	-
+# Returns:
+#   -
+#######################################
+notify_restart_loop() {
+	if [ $MAXLOOP_COUNTER -ne 0 ]; then
+		if [ $RUNLOOP_COUNTER -gt 1 ]; then
+		writelog "I" "--> status change (not found -> found)"
+			# only send notification after first loop
+			if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+				writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_VAL)"
+				notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_VAL"
+				writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_VAL"
+			fi
+		fi
+	fi
+}
+
+notify_stop_loop() {
+	writelog "I" ""
 }
 
 # ########################################################
@@ -613,14 +675,23 @@ while true; do
 		do
 			# match marker systems with online systems (IP based)
 			# note: space is important to find this IP (CHECKHOSTS has an additional space at end)
-			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
+
+			if [[ $CHECKHOSTS =~ "$FOUND_IP " ]]; then
+#			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
+					# -----------------------------------------------
+					# IP check
+					# -----------------------------------------------
 					DUMMY="System (IP)"
 					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
 					FOUND_SYS=$(get_hostname_from_ip $FOUND_IP)
+					FOUND_SYS=$(string_to_lower "$FOUND_SYS")
 					DUMMY="$DUMMY [$FOUND_IP -> $FOUND_SYS] - valid marker system"
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
 					writelog "I" "$DUMMY"
 			else
+				# -----------------------------------------------
+				# HOSTNAME check
+				# -----------------------------------------------
 				# match marker systems with online systems (IP translated in hostname)
 				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
 				FOUND_SYS=$(string_to_lower "$FOUND_SYS")
@@ -629,7 +700,7 @@ while true; do
 				FOUND_SYS_LINES=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}'| wc -l)
 				# check valid ip address (vs. multiple hostnames)
 				if [[ $FOUND_SYS_LINES -eq 1 ]]; then
-						# only accept ssingle-line matches (unique hostnames)
+					# only accept single-line matches (unique hostnames)
 					if [ ! -z $FOUND_SYS ]; then
 						CHECKHOSTS=$(echo $CHECKHOSTS | tr '[A-Z]' '[a-z]')
 						FOUND_SYS=$(echo $FOUND_SYS | tr '[A-Z]' '[a-z]')
@@ -653,33 +724,56 @@ while true; do
 		writelog "D" "MAXLOOP_COUNTER=$MAXLOOP_COUNTER"
 		writelog "D" "RUNLOOP_COUNTER=$RUNLOOP_COUNTER"
 		writelog "D" "NOTIFY_ON_STATUS_CHANGE=$NOTIFY_ON_STATUS_CHANGE"
-		# if variable couldn't be resetted
-		if [ $FOUND_SYSTEMS -ge 1 ]; then
-			# now systems found
-			# note: former status is no system found (resetted loop counter)?
-			if [ $MAXLOOP_COUNTER -ne 0 ]; then
-				if [ $RUNLOOP_COUNTER -gt 1 ]; then
-				writelog "I" "--> status change (not found -> found)"
-					# only send notification after first loop
-					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
-						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_VAL)"
-						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_VAL"
-						writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_VAL"
-					fi
-				fi
-			fi
-			# reset counter
-			MAXLOOP_COUNTER=0
-			writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
-			### Trim whitespaces ###
-			VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
-			# replace spaces with ", "
-			VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
 
-			RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
-			writelog "I" "$RETURN_VAR"
+		# -----------------------------------------------
+		# main check to keep loop running...
+		# -----------------------------------------------
+		if [ $FOUND_SYSTEMS -ge 1 ]; then
+			# -----------------------------------------------
+			# one or more systems found?
+			# -----------------------------------------------
+			# special check: test network usage - if low, system in connected but not using the NAS
+			if [ $FOUND_SYSTEMS -eq 1 ]; then
+				# -----------------------------------------------
+				# just one system in list?
+				# -----------------------------------------------
+				VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
+				if [[ $CHECKHOSTS_DEEPSLEEP =~ "$VALID_MARKER_SYSTEMS_LIST" ]]; then
+					# -----------------------------------------------
+					# just one last deep sleep system!
+					# -----------------------------------------------
+					# last system is a deep sleep system, so check network usage
+					writelog "I" "Last system '$VALID_MARKER_SYSTEMS_LIST' is a defined deep sleep system."
+
+					writelog "I" "Checking network usage... Waiting..."
+					NETWORK_USEAGE_CHECK=$(is_network_in_use)
+					if [ $NETWORK_USEAGE_CHECK -eq 1 ]; then
+						# network has high usage
+						writelog "I" "Network usage is high."
+						restart_loop
+					else
+						writelog "I" "Network usage is low. Keep loop running..."
+						MAXLOOP_COUNTER=$((MAXLOOP_COUNTER+1))
+#						notification "$MYNAME" "$MESSAGE_LAST_SYSTEM_DEEPSLEEP"
+					fi
+				else
+					# -----------------------------------------------
+					# other than a deep sleep system!
+					# -----------------------------------------------
+					notify_restart_loop
+					restart_loop
+				fi
+			else
+				# -----------------------------------------------
+				# more than one system found!
+				# -----------------------------------------------
+				notify_restart_loop
+				restart_loop
+			fi
 		else
+			# -----------------------------------------------
 			# now no systems found
+			# -----------------------------------------------
 			# note: former status is system found (incremented loop counter)
 			if [ $MAXLOOP_COUNTER -eq 0 ]; then
 				# status change detected?
@@ -698,7 +792,9 @@ while true; do
 			writelog "W" "No marker systems found. Proceeding with loop. ($MAXLOOP_COUNTER of $SLEEP_MAXLOOP)"
 		fi
 
+		# -----------------------------------------------
 		# counter > grace timer?
+		# -----------------------------------------------
 		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
 			# counter = grace timer?
 			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
