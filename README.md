@@ -48,7 +48,7 @@ On some systems, a system in standby continues to respond to pings from this scr
 ## Logic
 ![logic_diagram](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/logic_diagram.png)
 
-´´´
+```
 Title Synology Autoshutdown (main loop)
 Init->Config: 
 Config->Check IP: 
@@ -66,8 +66,7 @@ Observation phase->Notification: observation started
 Observation phase->Notification: grace period started
 Observation phase->Shutdown: limit reached
 Shutdown->Notification: shut down initialized
-
-´´´
+```
 (translated by https://www.websequencediagrams.com)
 
 ## Prerequisites
