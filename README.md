@@ -32,6 +32,15 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 ## Disadvantages
 - Increased start times due to cold start of the NAS
 
+## Features
+- Easy setup
+- Self-inititalizing
+- Logging
+- No dependencies
+- No installation of other toos required (no system modification!)
+- Self restarting
+- Self reconfiguring
+
 ## Important note:
 
 On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively.
