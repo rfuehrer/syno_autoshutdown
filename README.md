@@ -34,16 +34,20 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 
 ## Features
 - Easy setup
-- Self-inititalizing
+- Self-inititalizing (with default values if no config is specified) 
 - Logging
 - No dependencies
-- No installation of other toos required (no system modification!)
-- Self restarting
-- Self reconfiguring
+- Out-of-the-box usable - no installation of other toos required (no system modification!)
+- Self restarting (on code changes)
+- Self reconfiguring (on config changes)
 
-## Important note:
+## Important note
 
-On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively.
+On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively. 
+
+The script attempts to determine if the remaining system is a system in deep sleep mode. This is done by measuring network traffic. If the value falls below a threshold value, the system is evaluated as de facto switched off.
+
+This method is inaccurate because even a switched-on system can cause little traffic.
 
 ## Logic
 ![logic_diagram](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/logic_diagram.png)
