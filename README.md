@@ -45,6 +45,31 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 
 On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively.
 
+## Logic
+![logic_diagram](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/logic_diagram.png)
+
+´´´
+Title Synology Autoshutdown (main loop)
+Init->Config: 
+Config->Check IP: 
+loop main loop
+    Check IP->Check hostname: found IP not specified
+    Check hostname->Check IP: >1 Systems found
+    Check hostname->Check deep sleep: =1 system found
+    Check hostname->Observation phase: <1 system found
+    Check deep sleep->Check IP: high traffic
+    Check deep sleep->Observation phase: low traffic
+    Check IP->Observation phase: no system found
+    Check deep sleep->Observation phase: no system found
+end
+Observation phase->Notification: observation started
+Observation phase->Notification: grace period started
+Observation phase->Shutdown: limit reached
+Shutdown->Notification: shut down initialized
+
+´´´
+(translated by https://www.websequencediagrams.com)
+
 ## Prerequisites
 - NAS (Synology with Busy Box)
 - own volume (recommended)
