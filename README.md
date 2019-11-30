@@ -13,33 +13,34 @@ The script also has the advantage that no inflated packages need to be installed
 At definable intervals, all systems of the current network segment (e.g. 10.0.0.x) are checked whether they are reachable. If a system could be detected, this is compared with the list of systems that were defined to avoid a shutdown. If no system could be found, the system continues to attempt to find systems for a defined period of time. If no systems are found during this time, the system is shut down. A named system found resets this check.
 
 ## Functions
-- Bash Script
-- Use of simple functions from Busy Box
-- Connection to IFTTT (optional)
+- just nativ bash script
+- use of simple functions from BusyBox
+- connection to IFTTT (optional)
 - logging
-- Automatic initialization when configuration is changed
+- automatic initialization when configuration is changed
 - automatic restart of the script on code change
-- warning times
-- Support of beep output to the internal NAS loudspeaker
+- warning times (grace priod)
+- support of beep output to the internal NAS loudspeaker
 
 ## Advantages
 - simple solution
-- Use on different NAS possible
+- use on different NAS possible
 - easy maintenance
-- Expandable
-- Support for electricity saving
+- expandable
+- support for electricity saving
 
 ## Disadvantages
-- Increased start times due to cold start of the NAS
+- increased start times due to cold start of the NAS
 
 ## Features
-- Easy setup
-- Self-inititalizing (with default values if no config is specified) 
-- Logging
-- No dependencies
-- Out-of-the-box usable - no installation of other toos required (no system modification!)
-- Self restarting (on code changes)
-- Self reconfiguring (on config changes)
+- easy setup
+- self-inititalizing (with default values if no config is specified) 
+- logging
+- no dependencies
+- out-of-the-box usable - no installation of other toos required (no system modification!)
+- self restarting (on code changes)
+- self reconfiguring (on config changes)
+- self initializing of config file and missing config options
 
 ## Important note
 
