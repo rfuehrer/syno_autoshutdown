@@ -40,8 +40,8 @@ PARAMS=$1
 # # DEFAULT VARIABLES
 # ########################################################
 # ########################################################
-APP_VERSION="2.00"
-APP_DATE="22.11.2019"
+APP_VERSION="2.01"
+APP_DATE="30.11.2019"
 APP_SOURCE="https://github.com/rfuehrer/syno_autoshutdown/"
 
 SLEEP_TIMER=10
@@ -54,8 +54,9 @@ RUNLOOP_COUNTER=0
 MAXLOOP_COUNTER=0
 
 CONFIGFILE=autoshutdown.config
-HASHFILE=autoshutdown.hash
-HASHSCRIPTFILE=autoshutdown.pidhash
+HASHFILE=autoshutdown.config.hash
+HASHSCRIPTFILE=autoshutdown.sh.pidhash
+HASHSCRIPTFILE_DEV=autoshutdown.sh-dev.pidhash
 
 # ------- DO NOT EDIT BELOW THIS LINE -------
 # ########################################################
@@ -64,8 +65,9 @@ HASHSCRIPTFILE=autoshutdown.pidhash
 # ########################################################
 # ########################################################
 PID=$BASHPID
-LOG_TIMESTAMP_FORMAT=$(date +%Y%m%d_%H%M%S)
-LOGFILE=autoshutdown_$LOG_TIMESTAMP_FORMAT.log
+LOG_TIMESTAMP_FORMAT_DATETIME=$(date +%Y%m%d_%H%M%S)
+LOG_TIMESTAMP_FORMAT_DATE=$(date +%Y%m%d)
+LOG_TIMESTAMP_FORMAT_TIME=$(date +%H%M%S)
 MY_PRIMARY_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
 MY_SCAN_RANGE=$(echo $MY_PRIMARY_IP | cut -d. -f-3)
 MY_START_TIME=$(date +"%d.%m.%Y %H:%M:%S")
@@ -80,7 +82,6 @@ if [ "z$MY_HOSTNAME" != "z" ]; then
 	fi
 fi
 SCRIPTFILE=$THISDIR/$SCRIPTFILE
-LOGFILE=$THISDIR/$LOGFILE
 CONFIGFILE=$THISDIR/$CONFIGFILE
 HASHFILE=$THISDIR/$HASHFILE
 
@@ -131,6 +132,7 @@ string_to_lower(){
 #	$2: default value
 #	$3: description of variable
 #	$4: output read value to console(log (0/1))
+#	$5: initialize config value if not present (0/1) - a later call with <>0 will initialize missing values
 # Returns:
 #   -
 #######################################
@@ -139,7 +141,8 @@ read_config_value(){
 	local MY_DEFAULT=$2
 	local MY_DESCRIPTION=$3
 	local MY_OUTPUT=$4
-
+	local MY_INIT_CONFIG=$5
+	
 	local RET
 	RET=""
 
@@ -149,21 +152,22 @@ read_config_value(){
 		RET=$(cat $CONFIGFILE | grep "^$MY_VAR=" | cut -d= -f2)
 #		: "${ACTIVE_STATUS:=1}"
 		if [ "$RET" == "" ];then
-			writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
+			[ $MY_OUTPUT == "1" ] && writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
 			RET=$MY_DEFAULT
 		fi
 	else
-		# string not found
-		writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
-		echo "" >>$CONFIGFILE
-		echo "; $MY_VAR: $MY_DESCRIPTION" >>$CONFIGFILE
-		echo "$MY_VAR=$MY_DEFAULT" >>$CONFIGFILE
 		RET=$MY_DEFAULT
+		if [ "$MY_INIT_CONFIG" != "0" ]; then
+			# string not found
+			[ $MY_OUTPUT == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
+			echo "" >>$CONFIGFILE
+			echo "; [$MY_VAR] $MY_DESCRIPTION" >>$CONFIGFILE
+			echo "$MY_VAR=$MY_DEFAULT" >>$CONFIGFILE
+		fi
 	fi
 	# set dynamic variable name to read content
 	eval $MY_VAR=\$RET
-
-	 [ $MY_OUTPUT == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
+	[ $MY_OUTPUT == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
 }
 
 #######################################
@@ -218,18 +222,20 @@ read_config() {
     # reload config
     writelog "I" "(Re-)Reading config file..."
   	
-	read_config_value "CHECKHOSTS" "add-systems-to-monitor seperate-with-spaces" "client (to be checked) information; separated by space" 1
+	read_config_value "CHECKHOSTS" "add-systems-to-monitor seperate-with-spaces" "client (to be checked) information; separated by space (valaue: $)" 1 1
 	CHECKHOSTS="$CHECKHOSTS "
 	CHECKHOSTS=$(string_to_lower "$CHECKHOSTS")
 
-	read_config_value "CHECKHOSTS_DEEPSLEEP" "add-systems-with-deep-sleep-mode" "client (to be checked) with deep sleep mode (special checks); separated by space" 1
+	read_config_value "CHECKHOSTS_DEEPSLEEP" "add-systems-with-deep-sleep-mode" "client (to be checked) with deep sleep mode (special checks); separated by space (valaue: $)" 1 1
 	CHECKHOSTS_DEEPSLEEP="$CHECKHOSTS_DEEPSLEEP "
 	CHECKHOSTS_DEEPSLEEP=$(string_to_lower "$CHECKHOSTS_DEEPSLEEP")
 
-	read_config_value "MYNAME" "$MY_HOSTNAME" "cutsomizable hostname of executing NAS (used in notifications)" 1
-	read_config_value "ACTIVE_STATUS" "1" "active status of this script (for manual deactivation)" 1
-	read_config_value "DEBUG_MODE" "0" "debug mode (outut of debug messages to stdout and log)" 1
-	read_config_value "USE_INTERACTIVE_COLOR" "1" "use color codes in interactive/console mode" 1
+	read_config_value "CHECKHOSTS_IGNORE_MULTI_HOSTNAMES" "1" "if set ignore all names except the first one (valaue: 0/1)" 1 1
+
+	read_config_value "MYNAME" "$MY_HOSTNAME" "cutsomizable hostname of executing NAS (used in notifications) (valaue: $)" 1 1
+	read_config_value "ACTIVE_STATUS" "1" "active status of this script (for manual deactivation) (value: 0/1)" 1 1
+	read_config_value "DEBUG_MODE" "0" "debug mode (outut of debug messages to stdout and log) (value: 0/1)" 1 1
+	read_config_value "USE_INTERACTIVE_COLOR" "1" "use color codes in interactive/console mode (value: 0/1)" 1 1
 
 	# Color codes
 	#Black        0;30     Dark Gray     1;30
@@ -240,41 +246,51 @@ read_config() {
 	#Purple       0;35     Light Purple  1;35
 	#Cyan         0;36     Light Cyan    1;36
 	#Light Gray   0;37     White         1;37
-	read_config_value "COLOR_ERROR" "\033[0;31m" "color code for error classification" 0
-	read_config_value "COLOR_WARNING" "\033[0;33m" "color code for warning classification" 0
-	read_config_value "COLOR_INFO" "\033[1;37m" "color code for info classification" 0
-	read_config_value "COLOR_DEBUG" "\033[1;30m" "color code for debug classification" 0
-	read_config_value "COLOR_PID" "\033[0;35m" "color code for process id" 0
+	read_config_value "COLOR_ERROR" "\033[0;31m" "color code for error classification (value: $)" 0 1
+	read_config_value "COLOR_WARNING" "\033[0;33m" "color code for warning classification (value: $)" 0 1
+	read_config_value "COLOR_INFO" "\033[1;37m" "color code for info classification (value: $)" 0 1
+	read_config_value "COLOR_DEBUG" "\033[1;30m" "color code for debug classification (value: $)" 0 1
+	read_config_value "COLOR_PID" "\033[0;35m" "color code for process id" 0 1
 
-	read_config_value "SLEEP_TIMER" 60 "wating time (loop) to check clients again" 1
-	read_config_value "SLEEP_MAXLOOP" 30 "number of max loops" 1
-	read_config_value "GRACE_TIMER" 20 "start grace period after x loops" 1
-	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines" 1
-	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days" 1
-	read_config_value "IFTTT_KEY" "" "IFTTT magic key for webhook notifications" 0
-	read_config_value "IFTTT_EVENT" "" "IFTTT event name for notifications" 1
-	read_config_value "SHUTDOWN_BEEP" 1 "beep system loudspeaker if shutting down (0/1)" 1
-	read_config_value "SHUTDOWN_BEEP_COUNT" 5 "number of beeps at shutdown" 1
- 	read_config_value "GRACE_BEEP" 1 "beep system loudspeaker if in grace period (0/1)" 1
-	read_config_value "GRACE_BEEP_COUNT" 1 "number of beeps in grace period" 1
-	read_config_value "NOTIFY_ON_GRACE_START" 1 "send notification on start of grace period" 1
-	read_config_value "NOTIFY_ON_GRACE_EVERY" 5 "send notification in grace period" 1
-	read_config_value "NOTIFY_ON_SHUTDOWN" 1 "send notification on shutdown" 1
-	read_config_value "NOTIFY_ON_LONGRUN_EVERY" 180 "send notification if system is running a long time" 1
-	read_config_value "NOTIFY_ON_STATUS_CHANGE" 1 "send niotification if status of connected system changes" 1
- 	read_config_value "MESSAGE_SLEEP" "System will be shut down now..." "notification message if system is shutting down" 1
- 	read_config_value "MESSAGE_GRACE_START" "System will be shut down soon..." "notification message if grace periods starts" 1
-  	read_config_value "MESSAGE_GRACE_EVERY" "System will be shut down soon..." "notification message while in grace period" 1
- 	read_config_value "MESSAGE_LONGRUN" "System is running for a long time..." "notification message if system is running a long time" 1
- 	read_config_value "MESSAGE_STATUS_CHANGE_VAL" "Systems found, starting normal mode..." "notification message if valid systems are found" 1
- 	read_config_value "MESSAGE_STATUS_CHANGE_INV" "No systems found, starting monitoring mode..." "notification message if no valid systems are found" 1
- 	read_config_value "MESSAGE_LAST_SYSTEM_DEEPSLEEP" "Remaining valid system seems to be in deep sleep mode. Continuing checks.." "notification message if remaining system is possible in deep sleep mode" 1
+	read_config_value "SLEEP_TIMER" 60 "wating time (loop) to check clients again (value: #)" 1 1
+	read_config_value "SLEEP_MAXLOOP" 30 "number of max loops (value: #)" 1 1
+	read_config_value "GRACE_TIMER" 20 "start grace period after x loops (value: #)" 1 1
+
+	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines (value: #)" 1 1
+	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days (value: #)" 1 1
+	read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $)" 1 1
+	LOGFILE=$(replace_logfilename_placeholder $LOGFILE_FILENAME)
+	LOGFILE=$THISDIR/$LOGFILE
+	read_config_value "SCRIPT_DEV_FILENAME" "autoshutdown.sh.txt" "define script filename for edited version (copies from this file to running script at start of loop; prevents text file busy errors) (value: $)" 1 1
+	SCRIPTFILE_DEV=$THISDIR/$SCRIPT_DEV_FILENAME
+
+	read_config_value "IFTTT_KEY" "" "IFTTT magic key for webhook notifications (value: $)" 0 1
+	read_config_value "IFTTT_EVENT" "" "IFTTT event name for notifications (value: $)" 1 1
+
+	read_config_value "SHUTDOWN_BEEP" 1 "beep system loudspeaker if shutting down (value: 0/1)" 1 1
+	read_config_value "SHUTDOWN_BEEP_COUNT" 5 "number of beeps at shutdown (value: #)" 1 1
+ 	read_config_value "GRACE_BEEP" 1 "beep system loudspeaker if in grace period (value: 0/1)" 1 1
+	read_config_value "GRACE_BEEP_COUNT" 1 "number of beeps in grace period (value: #)" 1 1
+
+	read_config_value "NOTIFY_ON_GRACE_START" 1 "send notification on start of grace period (value: 0/1)" 1 1
+	read_config_value "NOTIFY_ON_GRACE_EVERY" 5 "send notification in grace period (value: #)" 1 1
+	read_config_value "NOTIFY_ON_SHUTDOWN" 1 "send notification on shutdown (value: 0/1)" 1 1
+	read_config_value "NOTIFY_ON_LONGRUN_EVERY" 180 "send notification if system is running a long time (value: #)" 1 1
+	read_config_value "NOTIFY_ON_STATUS_CHANGE" 1 "send notification if status of connected system changes (value: 0/1)" 1 1
+
+ 	read_config_value "MESSAGE_SLEEP" "System will be shut down now..." "notification message if system is shutting down (valaue: $)" 1 1
+ 	read_config_value "MESSAGE_GRACE_START" "System will be shut down soon..." "notification message if grace periods starts (valaue: $)" 1 1
+  	read_config_value "MESSAGE_GRACE_EVERY" "System will be shut down soon..." "notification message while in grace period (valaue: $)" 1 1
+ 	read_config_value "MESSAGE_LONGRUN" "System is running for a long time..." "notification message if system is running a long time (valaue: $)" 1 1
+ 	read_config_value "MESSAGE_STATUS_CHANGE_VAL" "Systems found, starting normal mode..." "notification message if valid systems are found (valaue: $)" 1 1
+ 	read_config_value "MESSAGE_STATUS_CHANGE_INV" "No systems found, starting monitoring mode..." "notification message if no valid systems are found (valaue: $)" 1 1
+ 	read_config_value "MESSAGE_LAST_SYSTEM_DEEPSLEEP" "Remaining valid system seems to be in deep sleep mode. Continuing checks.." "notification message if remaining system is possible in deep sleep mode (valaue: $)" 1 1
  
-	read_config_value "NETWORK_USAGE_INTERFACE" "eth0" "network interface of NAS to be checked (e.g. eth0, eth1, bond0,...)" 1
-	read_config_value "NETWORK_USAGE_INTERFACE_MIN_BYTES" 1000 "Less than x bytes per second for low bandwidth" 1
-	read_config_value "NETWORK_USAGE_INTERFACE_MAX_BYTES" 5000 "More than x bytes per second for high bandwidth" 1
-	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage" 1
-	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage" 1
+	read_config_value "NETWORK_USAGE_INTERFACE" "eth0" "network interface of NAS to be checked (e.g. eth0, eth1, bond0,...) (valaue: $)" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MIN_BYTES" 1000 "Less than x bytes per second for low bandwidth (valaue: #)" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MAX_BYTES" 5000 "More than x bytes per second for high bandwidth (valaue: #)" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage (valaue: #)" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage (valaue: #)" 1 1
 
   else
 	    writelog "I" "Config hash - hash value confirmed. No action needed."
@@ -293,8 +309,44 @@ read_config() {
 #   $MD5_HASHSCRIPT_SAVED
 #######################################
 check_pidhash(){
-    local MD5_HASHSCRIPT=$(md5sum $SCRIPTFILE| cut -d ' ' -f 1)
 
+	if [ -f $SCRIPTFILE_DEV ]; then
+    	local MD5_HASHSCRIPT_DEV=$(md5sum $SCRIPTFILE_DEV| cut -d ' ' -f 1)
+
+		if [ ! -f $HASHSCRIPTFILE_DEV ]; then
+			echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
+			writelog "I" "Script (dev) hash - init new hash"
+			writelog "I" "$MD5_HASHSCRIPT_DEV -> $HASHSCRIPTFILE_DEV"
+			echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
+			writelog "I" "Script (dev) hash - hash value confirmed. No action needed."
+		else
+			MD5_HASHSCRIPT_DEV_SAVED=$(cat $HASHSCRIPTFILE_DEV)
+			writelog "D" "Script (dev) hash - actual hash value: $MD5_HASHSCRIPT_DEV"
+			writelog "D" "Script (dev) hash - saved hash value : $MD5_HASHSCRIPT_DEV_SAVED"
+
+			if [ "$MD5_HASHSCRIPT_DEV_SAVED" != "$MD5_HASHSCRIPT_DEV" ]; then
+				# do something
+				writelog "W" "Script (dev) hash - script modified, copy new version of script"
+				writelog "I" "Script (dev): $SCRIPTFILE_DEV"
+				writelog "I" "Script       : $SCRIPTFILE"
+
+				cp "$SCRIPTFILE_DEV" "$SCRIPTFILE"
+				writelog "I" "Script (dev) copied..."
+
+				echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
+		        writelog "W" "Script (dev) hash - dev script modified, refresh hash"
+				writelog "I" "$MD5_HASHSCRIPT_DEV -> $HASHSCRIPTFILE_DEV"
+				echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
+			else
+				writelog "I" "Script (dev) hash - hash value confirmed. No action needed."
+			fi
+		fi
+	else
+		writelog "I" "Script (dev) - dev file not present. No action needed."
+		rm $HASHSCRIPTFILE_DEV 2>/dev/null
+	fi
+
+    local MD5_HASHSCRIPT=$(md5sum $SCRIPTFILE| cut -d ' ' -f 1)
     # first run?
     if [ ! -f $HASHSCRIPTFILE ]; then
         writelog "I" "Script hash - init new hash"
@@ -335,6 +387,32 @@ beeps() {
 		echo 2 > /dev/ttyS1
 		sleep 1
 	done
+}
+
+#######################################
+# Replace placeholders in log filename
+# Globals:
+#   $MY_HOSTNAME
+#	$LOG_TIMESTAMP_FORMAT_DATETIME
+#	$LOG_TIMESTAMP_FORMAT_DATE
+#	$LOG_TIMESTAMP_FORMAT_TIME
+#	$PID
+# Arguments:
+#   $1: log filename to be converted
+# Returns:
+#   converted string
+#######################################
+replace_logfilename_placeholder()
+{
+	local retvar="$1"
+
+	retvar=${retvar//#DATETIME#/$LOG_TIMESTAMP_FORMAT_DATETIME}
+	retvar=${retvar//#DATE#/$LOG_TIMESTAMP_FORMAT_DATE}
+	retvar=${retvar//#TIME#/$LOG_TIMESTAMP_FORMAT_TIME}
+	retvar=${retvar//#PID#/$PID}
+	retvar=${retvar//#HOSTNAME#/$MY_HOSTNAME}
+
+	echo "$retvar"
 }
 
 #######################################
@@ -420,12 +498,14 @@ writelog()
 		else
 			echo "$NOW [$PID] [$MSGLEVEL] - $MSG"
 		fi
+
+		# log output
 		echo "$NOW [$PID] [$MSGLEVEL] - $MSG" >>$LOGFILE
 	fi
 
 	# shorten logfile to max line number if not set to zero (0)
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
-		# log rotate
+		# log rotate dynamic logfile
 		COUNT_LINES=$(wc -l < "$LOGFILE")
 		tail -n $LOGFILE_MAXLINES $LOGFILE >$LOGFILE.temp
 		rm $LOGFILE
@@ -578,6 +658,10 @@ notify_stop_loop() {
 #	echo "Process already running"
 #fi
 
+read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $)" 0 0
+LOGFILE=$(replace_logfilename_placeholder $LOGFILE_FILENAME)
+LOGFILE=$THISDIR/$LOGFILE
+
 # ########################################################
 # # INTRO HEADER
 writelog "W" "################################################################################"
@@ -694,10 +778,14 @@ while true; do
 				# -----------------------------------------------
 				# match marker systems with online systems (IP translated in hostname)
 				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
+				if [ $CHECKHOSTS_IGNORE_MULTI_HOSTNAMES -eq 1 ]; then
+					# ignore all names except the first one.
+					FOUND_SYS=$(echo "$FOUND_SYS"|head -n 1)
+				fi
 				FOUND_SYS=$(string_to_lower "$FOUND_SYS")
 				writelog "D" "FOUND_SYS (lower)=$FOUND_SYS"
 				# find multi hostname systems (e.g. fritzbox)
-				FOUND_SYS_LINES=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}'| wc -l)
+				FOUND_SYS_LINES=$(echo "$FOUND_SYS"|wc -l)
 				# check valid ip address (vs. multiple hostnames)
 				if [[ $FOUND_SYS_LINES -eq 1 ]]; then
 					# only accept single-line matches (unique hostnames)
