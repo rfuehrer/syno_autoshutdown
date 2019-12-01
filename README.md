@@ -63,7 +63,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively.
 
 ## Prerequisites
-- NAS (Synology with Busy Box)
+- NAS (Synology with BusyBox)
 - own volume (recommended)
 - SSH access (recommended)
 - Scheduler (e.g. Cron) with possibility to execute shell scripts
