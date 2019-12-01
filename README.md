@@ -87,6 +87,8 @@ Shutdown->Notification: shut down initialized
 
 ### Shell Script
 1. Copy shell script and configuration file to shared volume (e.g. `control`)an your NAS. Remember the path to the shell script (e.g. `/volume1/control/syno-autoshutdown/`)
+2. Run script with sudo rights to initialize a default config and defined your settings in this created file
+ - or -
 2. Rename the default configuration file to autoshutdown.conf or autoshutdown-(hostname).conf where (hostname) is the host name of your NAS. This is helpful if you have multiple NAS where you want to share files but separate configurations.
 3. Proceed with scheduler configuration.
 
