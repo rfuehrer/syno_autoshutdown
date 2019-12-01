@@ -2,6 +2,30 @@
 
 A simple shell script to shutdown a Synology NAS if no authorized client is online. The main purpose of this script is to reduce power consumption. 
 
+# Table of content
+- [Synology Autoshutdown](#synology-autoshutdown)
+  * [Table of content](#table-of-content)
+  * [Purpose](#purpose)
+  * [Basic mechanism](#basic-mechanism)
+  * [Functions](#functions)
+  * [Advantages](#advantages)
+  * [Disadvantages](#disadvantages)
+  * [Features](#features)
+  * [Important note](#important-note)
+  * [Logic](#logic)
+  * [Prerequisites](#prerequisites)
+  * [Presumption](#presumption)
+  * [Installation](#installation)
+    + [Shell Script](#shell-script)
+    + [Task (Scheduler)](#task--scheduler-)
+    + [IFTTT (Notification) (optional)](#ifttt--notification---optional-)
+  * [Placeholder variables](#placeholder-variables)
+  * [Other files](#other-files)
+      - [autoshutdown.hash](#autoshutdownhash)
+      - [autoshutdown.pid](#autoshutdownpid)
+      - [autoshutdown.pidhash](#autoshutdownpidhash)
+
+
 ## Purpose
 
 The NAS can be used to store media content. If you want to access them, the system is switched on manually or by wake-on-lan. The system is in operation during this time. But what happens if the client is no longer online? The NAS continues to run and goes into standby - but it usually continues to consume power. 
@@ -13,66 +37,28 @@ The script also has the advantage that no inflated packages need to be installed
 At definable intervals, all systems of the current network segment (e.g. 10.0.0.x) are checked whether they are reachable. If a system could be detected, this is compared with the list of systems that were defined to avoid a shutdown. If no system could be found, the system continues to attempt to find systems for a defined period of time. If no systems are found during this time, the system is shut down. A named system found resets this check.
 
 ## Functions
-- just nativ bash script
-- use of simple functions from BusyBox
-- connection to IFTTT (optional)
+- Bash Script
+- Use of simple functions from Busy Box
+- Connection to IFTTT (optional)
 - logging
-- automatic initialization when configuration is changed
+- Automatic initialization when configuration is changed
 - automatic restart of the script on code change
-- warning times (grace priod)
-- support of beep output to the internal NAS loudspeaker
+- warning times
+- Support of beep output to the internal NAS loudspeaker
 
 ## Advantages
 - simple solution
-- use on different NAS possible
+- Use on different NAS possible
 - easy maintenance
-- expandable
-- support for electricity saving
+- Expandable
+- Support for electricity saving
 
 ## Disadvantages
-- increased start times due to cold start of the NAS
+- Increased start times due to cold start of the NAS
 
-## Features
-- easy setup
-- self-inititalizing (with default values if no config is specified) 
-- logging
-- no dependencies
-- out-of-the-box usable - no installation of other toos required (no system modification!)
-- self restarting (on code changes)
-- self reconfiguring (on config changes)
-- self initializing of config file and missing config options
+## Important note:
 
-## Important note
-
-On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively. 
-
-The script attempts to determine if the remaining system is a system in deep sleep mode. This is done by measuring network traffic. If the value falls below a threshold value, the system is evaluated as de facto switched off.
-
-This method is inaccurate because even a switched-on system can cause little traffic.
-
-## Logic
-![logic_diagram](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/logic_diagram.png)
-
-```
-Title Synology Autoshutdown (main loop)
-Init->Config: 
-Config->Check IP: 
-loop main loop
-    Check IP->Check hostname: found IP not specified
-    Check hostname->Check IP: >1 Systems found
-    Check hostname->Check deep sleep: =1 system found
-    Check hostname->Observation phase: <1 system found
-    Check deep sleep->Check IP: high traffic
-    Check deep sleep->Observation phase: low traffic
-    Check IP->Observation phase: no system found
-    Check deep sleep->Observation phase: no system found
-end
-Observation phase->Notification: observation started
-Observation phase->Notification: grace period started
-Observation phase->Shutdown: limit reached
-Shutdown->Notification: shut down initialized
-```
-(translated by https://www.websequencediagrams.com)
+On some systems, a system in standby continues to respond to pings from this script. These systems prevent the NAS from shutting down. This is especially the case for Mac systems that use Power Nap or do not use Safe Sleep Mode. Please check how systems behave in standby mode before using the script productively.
 
 ## Prerequisites
 - NAS (Synology with Busy Box)
@@ -87,8 +73,6 @@ Shutdown->Notification: shut down initialized
 
 ### Shell Script
 1. Copy shell script and configuration file to shared volume (e.g. `control`)an your NAS. Remember the path to the shell script (e.g. `/volume1/control/syno-autoshutdown/`)
-2. Run script with sudo rights to initialize a default config and defined your settings in this created file
- - or -
 2. Rename the default configuration file to autoshutdown.conf or autoshutdown-(hostname).conf where (hostname) is the host name of your NAS. This is helpful if you have multiple NAS where you want to share files but separate configurations.
 3. Proceed with scheduler configuration.
 
