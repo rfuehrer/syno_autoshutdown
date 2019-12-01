@@ -20,6 +20,8 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
     + [Task (Scheduler)](#task--scheduler-)
     + [IFTTT (Notification) (optional)](#ifttt--notification---optional-)
   * [Placeholder variables](#placeholder-variables)
+    + [Notifications](#notifications)
+    + [Log filename](#log-filename)
   * [Other files](#other-files)
       - [autoshutdown.hash](#autoshutdownhash)
       - [autoshutdown.pid](#autoshutdownpid)
@@ -129,6 +131,8 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ## Placeholder variables
 
+### Notifications
+
 Placeholders can be specified for messages in the configuration file. The following placeholders are permitted:
 
 ```
@@ -140,6 +144,16 @@ Placeholders can be specified for messages in the configuration file. The follow
 #RUNLOOP_TIME# : time of executed loops at all (RUNLOOP_COUNTER*SLEEP_TIME)
 #RUNLOOP_TIME_HUMAN# : time of executed loops at all in format d:h:m:s
 #SYS_UPTIME_HUMAN# : time since NAS startup in format h:m:s
+```
+
+### Log filename
+
+Placeholders can be specified for filename in the configuration file. The following placeholders are permitted:
+
+```
+#DATETIME# : sortable date/time format (YYYYMMDD-HHmmss)
+#DATE# :  sortable date format (YYYYMMDD)
+#TIME# :  sortable 24h time format (HHmmss)
 ```
 
 ## Other files
