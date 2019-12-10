@@ -1,2 +1,3 @@
 #!/bin/bash
-kill $(pidof autoshutdown.sh)
+pkill -f autoshutdown.sh
+pkill -f autoshutdown_webserver.py
