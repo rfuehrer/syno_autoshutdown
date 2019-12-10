@@ -4,25 +4,24 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
 
 # Table of content
 - [Synology Autoshutdown](#synology-autoshutdown)
-  * [Table of content](#table-of-content)
-  * [Purpose](#purpose)
-  * [Basic mechanism](#basic-mechanism)
-  * [Functions](#functions)
-  * [Advantages](#advantages)
-  * [Disadvantages](#disadvantages)
-  * [Features](#features)
-  * [Important note](#important-note)
-  * [Logic](#logic)
-  * [Prerequisites](#prerequisites)
-  * [Presumption](#presumption)
-  * [Installation](#installation)
-    + [Shell Script](#shell-script)
-    + [Task (Scheduler)](#task--scheduler-)
-    + [IFTTT (Notification) (optional)](#ifttt--notification---optional-)
-  * [Placeholder variables](#placeholder-variables)
-    + [Notifications](#notifications)
-    + [Log filename](#log-filename)
-  * [Other files](#other-files)
+- [Table of content](#table-of-content)
+  - [Purpose](#purpose)
+  - [Basic mechanism](#basic-mechanism)
+  - [Functions/features](#functionsfeatures)
+  - [Advantages](#advantages)
+  - [Disadvantages](#disadvantages)
+  - [Important note:](#important-note)
+  - [Prerequisites](#prerequisites)
+  - [Presumption](#presumption)
+  - [Logic](#logic)
+  - [Installation](#installation)
+    - [Shell Script](#shell-script)
+    - [Task (Scheduler)](#task-scheduler)
+    - [IFTTT (Notification) (optional)](#ifttt-notification-optional)
+  - [Placeholder variables](#placeholder-variables)
+    - [Notifications](#notifications)
+    - [Log filename](#log-filename)
+  - [Other files](#other-files)
       - [autoshutdown.hash](#autoshutdownhash)
       - [autoshutdown.pid](#autoshutdownpid)
       - [autoshutdown.pidhash](#autoshutdownpidhash)
@@ -38,14 +37,17 @@ The script also has the advantage that no inflated packages need to be installed
 ## Basic mechanism
 At definable intervals, all systems of the current network segment (e.g. 10.0.0.x) are checked whether they are reachable. If a system could be detected, this is compared with the list of systems that were defined to avoid a shutdown. If no system could be found, the system continues to attempt to find systems for a defined period of time. If no systems are found during this time, the system is shut down. A named system found resets this check.
 
-## Functions
-- Bash Script
-- Use of simple functions from Busy Box
+## Functions/features
+- Bash Script (easy setup)
+- Out-of-the-box usable - no installation of other toos required (no system modification!)		
+- Use of simple functions from Busy Box (no dependencies)
 - Connection to IFTTT (optional)
-- logging
-- Automatic initialization when configuration is changed
-- automatic restart of the script on code change
-- warning times
+- Logging
+- Self-inititalizing (with default values if no config is specified) 		
+- Self-restarting (on code changes)		
+- Self-reconfiguring (on config changes)		
+- Self-initializing of config file and missing config options
+- Warning times
 - Support of beep output to the internal NAS loudspeaker
 
 ## Advantages
@@ -70,6 +72,29 @@ On some systems, a system in standby continues to respond to pings from this scr
 
 ## Presumption
 - Installation on a Synology with DSM 6.x
+
+## Logic		
+ ![logic_diagram](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/logic_diagram.png)	
+  ```		
+ Title Synology Autoshutdown (main loop)		
+ Init->Config: 		
+ Config->Check IP: 		
+ loop main loop		
+     Check IP->Check hostname: found IP not specified		
+     Check hostname->Check IP: >1 Systems found		
+     Check hostname->Check deep sleep: =1 system found		
+     Check hostname->Observation phase: <1 system found		
+     Check deep sleep->Check IP: high traffic		
+     Check deep sleep->Observation phase: low traffic		
+     Check IP->Observation phase: no system found		
+     Check deep sleep->Observation phase: no system found		
+ end		
+ Observation phase->Notification: observation started		
+ Observation phase->Notification: grace period started		
+ Observation phase->Shutdown: limit reached		
+ Shutdown->Notification: shut down initialized		
+ ```		
+ (translated by https://www.websequencediagrams.com)
 
 ## Installation
 
