@@ -110,17 +110,42 @@ MY_UUID=$(uuidgen)
 init_webserver_shutdown(){
 	
 	# shutdown all previous instances
-	pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	if [ $WEBSERVER_INSTANCES -ne 0 ]; then
+		writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
+		pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
+		sleep 5
+	fi
 
-	writelog "I" "Shutdown webserver (external call )set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
-	writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
-	python "$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
-	notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
-	notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
-	
-	#while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; echo "$WEBSERVER_SHUTDOWN_WEBSITE" | nc -l 8080; } done
-	#shutdown -r now
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES)"
+
+	WEBSERVER_STARTUP_FAILED=0
+	WEBSERVER_STARTUP_COUNTER=0
+	while [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
+		WEBSERVER_STARTUP_COUNTER=$((WEBSERVER_STARTUP_COUNTER+1))
+
+		python "$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
+		sleep 2
+		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+		writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES)"
+
+		if [ $WEBSERVER_STARTUP_COUNTER -gt 5 ]; then
+			WEBSERVER_STARTUP_FAILED=1
+		fi
+	done
+
+	if [ $WEBSERVER_STARTUP_FAILED -eq 1 ]; then
+		writelog "E" "Failed to start webserver!"
+	else
+		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
+		writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
+		notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
+		notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
+	fi
 }
+
+
 
 #######################################
 # Resolve hostname from IP address
