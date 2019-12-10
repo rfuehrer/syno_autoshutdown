@@ -18,6 +18,7 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
     - [Shell Script](#shell-script)
     - [Task (Scheduler)](#task-scheduler)
     - [IFTTT (Notification) (optional)](#ifttt-notification-optional)
+    - [Webserver (shutdown)](#webserver-shutdown)
   - [Placeholder variables](#placeholder-variables)
     - [Notifications](#notifications)
     - [Log filename](#log-filename)
@@ -49,6 +50,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 - Self-initializing of config file and missing config options
 - Warning times
 - Support of beep output to the internal NAS loudspeaker
+- Lightweight python webserver to shutdown NAS promptly
 
 ## Advantages
 - simple solution
@@ -154,6 +156,28 @@ The script must also be run as root, but the execution can be set to inactive (a
 ![ifttt_maker_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/ifttt_maker_1.png)
 
 *) Your magic key is viewable via ifttt.com -> profile -> my services -> webhooks -> settings -> URL
+
+### Webserver (shutdown)
+
+In addition to the bash script, a python script is provided, which optionally starts a web service that allows the user to shut down the NAS system immediately via HTTP request.
+
+When the web server is started, a unique UUID is generated which can be used to control the web server. If the correct URL can be called by the user, the server is immediately shut down by calling another (confirmation) link.
+
+The URL is protected by the following features by unintentional or deliberate calls:
+
+- Free choice of the external and internal port on which the server listens
+- Free choice of the component of the URL that is to be used for the shutdown
+- Creation of a new and unique UUID at each start of the web server
+
+Example of a link:
+```
+http://<ip>:48080/33ff4f76-c00b-42b9-9c08-d303aba64c2a/shutdown
+```
+
+Calling up the website allows a further confirmation of the shutdown:
+![autoshutdown_webserver_execute](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_webserver_execute.png)
+
+If the button shown in the picture is confirmed, the system will shut down immediately.
 
 ## Placeholder variables
 
