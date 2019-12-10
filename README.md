@@ -124,7 +124,8 @@ You must run this task/script as root, as some commands are not allowed as users
 ![autoshutdown_start_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/autoshutdown_stop_2.png)
 
 ```
-kill $(pidof autoshutdown.sh)
+chmod 775 /volume1/control/syno-autoshutdown/autoshutdown_killall.sh
+/volume1/control/syno-autoshutdown/autoshutdown_killall.sh
 ```
 
 The script must also be run as root, but the execution can be set to inactive (and thus manual). This task is only used to temporarily terminate a previously executed script or several instances of the script. If the autoshutdown script should be started again, the NAS does not have to be restarted, but the first task can be executed. 
