@@ -179,6 +179,8 @@ Calling up the website allows a further confirmation of the shutdown:
 
 If the button shown in the picture is confirmed, the system will shut down immediately.
 
+THE WEBSERVER HAS TO BE ACTIVED BY SETTING CONFIG VALUE     WEBSERVER_SHUTDOWN_ACTIVE=1     !
+
 ## Placeholder variables
 
 ### Notifications

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 : ' 
 Created by René (https://github.com/rfuehrer)
@@ -88,6 +88,9 @@ HASHFILE=$THISDIR/$HASHFILE
 # reset color
 COLOR_NC="\033[0m"
 
+MY_PUBLIC_IP=$(curl --silent checkip.amazonaws.com 2>&1)
+MY_UUID=$(uuidgen)
+
 # ########################################################
 # ########################################################
 # # FUNCTIONS
@@ -95,6 +98,30 @@ COLOR_NC="\033[0m"
 # ########################################################
 
 # -------------------------------------------
+#######################################
+# Starts an asynchron webserver
+# Globals:
+#   -
+# Arguments:
+#   $1: port numbr
+# Returns:
+#   
+#######################################
+init_webserver_shutdown(){
+	
+	# shutdown all previous instances
+	pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
+
+	writelog "I" "Shutdown webserver (external call )set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
+	writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
+	python "$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
+	notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
+	notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
+	
+	#while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; echo "$WEBSERVER_SHUTDOWN_WEBSITE" | nc -l 8080; } done
+	#shutdown -r now
+}
+
 #######################################
 # Resolve hostname from IP address
 # Globals:
@@ -292,6 +319,23 @@ read_config() {
 	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage (valaue: #)" 1 1
 	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage (valaue: #)" 1 1
 
+	read_config_value "WEBSERVER_SHUTDOWN_ACTIVE" 0 "set own shutdown webserver active (valaue: 0/1)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_PORT" 8080 "port number of shutdown webserver (valaue: #)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_PORT_EXTERNAL" 48080 "external port number of shutdown webserver (valaue: #)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_URL" "shutdown" "path of shutdown webserver to execute shutdown (without prefix slash) (valaue: $)" 1 1
+	read_config_value "WEBSERVER_TEST_URL" "test" "path of webserver to test functionality (without prefix slash) (valaue: $)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_SCRIPT" "autoshutdown_webserver.py" "path of shutdown webserver (valaue: $)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_WEBSITE" "shutdown initialized" "content of html feedback page (valaue: $)" 1 1
+	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN_START" "Shutdown Websever initialized..." "notification message if webserver is initialized (valaue: $)" 1 1
+	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN" "Shutdown of system initialized by webserver" "notification message if shutdown initialized by webserver (valaue: $)" 1 1
+
+	# after each config (re)load the webserver has to be starten
+	# ########################################################
+	# # WEBSERVER START
+	if [ $WEBSERVER_SHUTDOWN_ACTIVE -eq 1 ];then
+		init_webserver_shutdown
+	fi
+
   else
 	    writelog "I" "Config hash - hash value confirmed. No action needed."
   fi
@@ -314,6 +358,7 @@ check_pidhash(){
     	local MD5_HASHSCRIPT_DEV=$(md5sum $SCRIPTFILE_DEV| cut -d ' ' -f 1)
 
 		if [ ! -f $HASHSCRIPTFILE_DEV ]; then
+			# two ecos required, because one alone seems to be ignored
 			echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
 			writelog "I" "Script (dev) hash - init new hash"
 			writelog "I" "$MD5_HASHSCRIPT_DEV -> $HASHSCRIPTFILE_DEV"
@@ -333,6 +378,7 @@ check_pidhash(){
 				cp "$SCRIPTFILE_DEV" "$SCRIPTFILE"
 				writelog "I" "Script (dev) copied..."
 
+				# two ecos required, because one alone seems to be ignored
 				echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
 		        writelog "W" "Script (dev) hash - dev script modified, refresh hash"
 				writelog "I" "$MD5_HASHSCRIPT_DEV -> $HASHSCRIPTFILE_DEV"
@@ -537,7 +583,8 @@ notification()
 				writelog "D" "Notification EVENT :$IFTTT_EVENT"
 				writelog "D" "Notification KEY   : $IFTTT_KEY"
 				writelog "D" "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
-				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY
+				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY >/dev/null 2>&1
+				writelog "I" "Notification sent: $MY_MESSAGE"
 			else
 				writelog "E" "No notification message stated. Notification aborted."
 			fi
@@ -924,26 +971,26 @@ while true; do
 		# check if loop > maxloop?
 		if [ $MAXLOOP_COUNTER -ge $SLEEP_MAXLOOP ]; then
 			# check if still no system found
-			if [ $FOUND_SYSTEMS -eq 0 ]; then
-				writelog "I" "STATUS: All systems still offline!"
-				writelog "I" "Shutting down this system... Sleep well :)"
-				# send notification on system shutdown?
-				if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
-					MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
-					notification "$MYNAME" "$MESSAGE_SLEEP"
-					writelog "I" "Notification sent: $MESSAGE_SLEEP"
-				fi
-				# beep on system shutdown?
-				if [ $SHUTDOWN_BEEP == "1" ];then
-					beeps $SHUTDOWN_BEEP_COUNT
-				fi
-				poweroff
-				writelog "I" "#####################################################"
-				writelog "I" "#####                 G O O D B Y                    "
-				writelog "I" "#####################################################"
-				sleep 60
-				exit 0
+#			if [ $FOUND_SYSTEMS -eq 0 ]; then
+#				writelog "I" "STATUS: All systems still offline!"
+			writelog "I" "Shutting down this system... Sleep well :)"
+			# send notification on system shutdown?
+			if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
+				MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
+				notification "$MYNAME" "$MESSAGE_SLEEP"
+				writelog "I" "Notification sent: $MESSAGE_SLEEP"
 			fi
+			# beep on system shutdown?
+			if [ $SHUTDOWN_BEEP == "1" ];then
+				beeps $SHUTDOWN_BEEP_COUNT
+			fi
+			poweroff
+			writelog "I" "#####################################################"
+			writelog "I" "#####                 G O O D B Y                    "
+			writelog "I" "#####################################################"
+			sleep 60
+			exit 0
+#			fi
 		fi
 		writelog "I" "Waiting for next check in $SLEEP_TIMER seconds..."
 	fi
