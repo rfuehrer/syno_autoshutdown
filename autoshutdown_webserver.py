@@ -24,7 +24,16 @@ class MyHandler(BaseHTTPRequestHandler):
 
         if self.path == my_spath:
             # self.wfile.write("<p align='center'><font size='32'><a href='"+my_apath+"'>execute shutdown now</a></font><p>")
-            self.wfile.write("<!DOCTYPE html><html><link rel='stylesheet' href='https://www.w3schools.com/w3css/4/w3.css'><style>.w3-button {width:250px;} a{text-decoration: none;}</style><body><div class='w3-container'><p align='center'><button class='w3-button w3-red'><a href='"+my_apath+"'>Execute Shutdown NOW</a></button></p></div></body></html>")
+            #self.wfile.write("<!DOCTYPE html><html><link rel='stylesheet' href='https://www.w3schools.com/w3css/4/w3.css'><style>.w3-button {width:250px;} a{text-decoration: none;}</style><body><div class='w3-container'><p align='center'><button class='w3-button w3-red'><a href='"+my_apath+"'>Execute Shutdown NOW</a></button></p></div></body></html>")
+
+            from string import Template
+            #open the file
+            filein = open( 'template/shutdown.html' )
+            #read it
+            src = Template( filein.read() )
+            #document data
+            d={ 'EXECUTE_TITLE':EXECUTE_TITLE, 'EXECUTE_URL':EXECUTE_URL }
+            self.wfile.write(src.substitute(d))
 
         if self.path == my_tpath:
             print "test_function got called"

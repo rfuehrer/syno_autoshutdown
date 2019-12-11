@@ -118,24 +118,26 @@ init_webserver_shutdown(){
 	fi
 
 	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
-	writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES)"
-
 	WEBSERVER_STARTUP_FAILED=0
 	WEBSERVER_STARTUP_COUNTER=0
-	while [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
+	writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
+	while [[ $WEBSERVER_STARTUP_FAILED -eq 0 ]] && [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
 		WEBSERVER_STARTUP_COUNTER=$((WEBSERVER_STARTUP_COUNTER+1))
 
-		python "$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
+		if [ $WEBSERVER_INSTANCES -eq 0 ]; then 
+			python "$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
+		fi
+		
 		sleep 2
 		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
-		writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES)"
+		writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
 
 		if [ $WEBSERVER_STARTUP_COUNTER -gt 5 ]; then
 			WEBSERVER_STARTUP_FAILED=1
 		fi
 	done
 
-	if [ $WEBSERVER_STARTUP_FAILED -eq 1 ]; then
+	if [ $WEBSERVER_INSTANCES -eq 0 ]; then
 		writelog "E" "Failed to start webserver!"
 	else
 		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
