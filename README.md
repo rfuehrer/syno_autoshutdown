@@ -19,7 +19,7 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
     - [Task (Scheduler)](#task-scheduler)
     - [IFTTT (Notification) (optional)](#ifttt-notification-optional)
     - [Webserver (shutdown)](#webserver-shutdown)
-  - [Alexa speech commands](#alexa-speech-commands)
+    - [Alexa speech commands](#alexa-speech-commands)
   - [Placeholder variables](#placeholder-variables)
     - [Notifications](#notifications)
     - [Log filename](#log-filename)
@@ -189,7 +189,7 @@ If the button shown in the picture is confirmed, the system will shut down immed
 
 THE WEBSERVER HAS TO BE ACTIVED BY SETTING CONFIG VALUE     WEBSERVER_SHUTDOWN_ACTIVE=1     !
 
-## Alexa speech commands
+### Alexa speech commands
 
 The web server has been supplemented by a magic key and magic word. With the help of these two very individual details, the web service can be controlled via a voice command and a Werrequest without prior consultation.
 
