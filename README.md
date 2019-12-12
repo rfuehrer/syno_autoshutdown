@@ -159,6 +159,12 @@ The script must also be run as root, but the execution can be set to inactive (a
 
 ### Webserver (shutdown)
 
+```
+IMPORTANT NOTE:
+
+The web server only uses security by obfuscation and no secure protection procedure against unauthorized calls. The use of this component must be evaluated individually. The module was designed to provide the functions as easily and quickly as possible via mobile end devices.
+```
+
 In addition to the bash script, a python script is provided, which optionally starts a web service that allows the user to shut down the NAS system immediately via HTTP request.
 
 When the web server is started, a unique UUID is generated which can be used to control the web server. If the correct URL can be called by the user, the server is immediately shut down by calling another (confirmation) link.
