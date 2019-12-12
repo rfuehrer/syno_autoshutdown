@@ -19,6 +19,7 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
     - [Task (Scheduler)](#task-scheduler)
     - [IFTTT (Notification) (optional)](#ifttt-notification-optional)
     - [Webserver (shutdown)](#webserver-shutdown)
+  - [Alexa speech commands](#alexa-speech-commands)
   - [Placeholder variables](#placeholder-variables)
     - [Notifications](#notifications)
     - [Log filename](#log-filename)
@@ -51,6 +52,7 @@ At definable intervals, all systems of the current network segment (e.g. 10.0.0.
 - Warning times
 - Support of beep output to the internal NAS loudspeaker
 - Lightweight python webserver to shutdown NAS promptly
+- Alexa integration (via IFTTT webrequests)
 
 ## Advantages
 - simple solution
@@ -186,6 +188,42 @@ Calling up the website allows a further confirmation of the shutdown:
 If the button shown in the picture is confirmed, the system will shut down immediately.
 
 THE WEBSERVER HAS TO BE ACTIVED BY SETTING CONFIG VALUE     WEBSERVER_SHUTDOWN_ACTIVE=1     !
+
+## Alexa speech commands
+
+The web server has been supplemented by a magic key and magic word. With the help of these two very individual details, the web service can be controlled via a voice command and a Werrequest without prior consultation.
+
+These data have been additionally integrated to enable static data, so that the security of the dynamic keys for normal access can be maintained. 
+
+Two factors are required for a successful call: the magic key, which is generated automatically if it is not already specified. And also a magic word, which can be freely assigned by the user. Both specifications are combined and result in a unique path specification for the web server. If this path is called, the system shuts down immediately.  
+
+To make this address callable via voice commands, the following steps are necessary (Alexa and IFTTT are examples):
+
+1. Add an Alexa trigger (or an other speech trigger)
+2. Select the Alexa-Webhooks action (https://ifttt.com/connect/maker_webhooks/amazon_alexa)
+3. Select "Use Alexa with hook  automate" (https://ifttt.com/applets/342458p-use-alexa-with-hook-to-automate)
+4. Name your trigger
+5. Define phrase Alexa will listen to
+
+![alexa_ifttt_1](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/alexa_ifttt_1.png)
+
+6. Define the URL of the magic webrequest. The URL contains following information
+
+```
+http://<public ip or adress>:<public port>/<magic key>/<magic word>
+```
+Your public ip and port depends on your router configuration. Have a look at section `Webserver (shutdown)` for more details.
+
+![alexa_ifttt_2](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/alexa_ifttt_2.png)
+
+7. Make ist a GET request
+8. And define it as text/plain request
+  
+![alexa_ifttt_3](https://github.com/rfuehrer/syno_autoshutdown/blob/master/images/alexa_ifttt_3.png)
+
+9. Save & Done
+
+The next time you ask Alexa "Alexa, trigger shutdown Synology" the device will be shut down.
 
 ## Placeholder variables
 

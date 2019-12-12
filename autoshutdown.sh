@@ -90,6 +90,7 @@ COLOR_NC="\033[0m"
 
 MY_PUBLIC_IP=$(curl --silent checkip.amazonaws.com 2>&1)
 MY_UUID=$(uuidgen)
+MY_WEBSERVER_MAGICKEY_GENERATED=$(uuidgen|md5sum|cut -d ' ' -f 1)
 
 # ########################################################
 # ########################################################
@@ -120,48 +121,50 @@ check_hash_script_modified(){
 #######################################
 init_webserver_shutdown(){
 	# check if script file is modified? if true, the webserver would be restarted after reloading/restarting the script
-	SCRIPT_MODIFIED=$(check_hash_script_modified)
-	if [ $SCRIPT_MODIFIED -eq 0 ]; then
-		# shutdown all previous instances
+#	SCRIPT_MODIFIED=$(check_hash_script_modified)
+#	if [ $SCRIPT_MODIFIED -eq 0 ]; then
+	# shutdown all previous instances
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	while [[ $WEBSERVER_INSTANCES -ne 0 ]]; do
+		writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
+		pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
+		sleep 2
 		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
-		if [ $WEBSERVER_INSTANCES -ne 0 ]; then
-			writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
-			pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
-			sleep 5
-		fi
+	done
+	sleep 5
 
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	WEBSERVER_STARTUP_FAILED=0
+	WEBSERVER_STARTUP_COUNTER=0
+	writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
+	while [[ $WEBSERVER_STARTUP_FAILED -eq 0 ]] && [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
+		WEBSERVER_STARTUP_COUNTER=$((WEBSERVER_STARTUP_COUNTER+1))
+
+		if [ $WEBSERVER_INSTANCES -eq 0 ]; then 
+			PYTHON_EXEC=$(which python)
+			$PYTHON_EXEC "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL --magickey "$WEBSERVER_MAGICKEY" --magicword "$WEBSERVER_MAGICWORD" &
+		fi
+		
+		sleep 2
 		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
-		WEBSERVER_STARTUP_FAILED=0
-		WEBSERVER_STARTUP_COUNTER=0
 		writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
-		while [[ $WEBSERVER_STARTUP_FAILED -eq 0 ]] && [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
-			WEBSERVER_STARTUP_COUNTER=$((WEBSERVER_STARTUP_COUNTER+1))
 
-			if [ $WEBSERVER_INSTANCES -eq 0 ]; then 
-				PYTHON_EXEC=$(which python)
-				$PYTHON_EXEC "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL &
-			fi
-			
-			sleep 2
-			WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
-			writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
-
-			if [ $WEBSERVER_STARTUP_COUNTER -gt 5 ]; then
-				WEBSERVER_STARTUP_FAILED=1
-			fi
-		done
-
-		if [ $WEBSERVER_INSTANCES -eq 0 ]; then
-			writelog "E" "Failed to start webserver!"
-		else
-			writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
-			writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
-			notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
-			notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
+		if [ $WEBSERVER_STARTUP_COUNTER -gt 5 ]; then
+			WEBSERVER_STARTUP_FAILED=1
 		fi
+	done
+
+	if [ $WEBSERVER_INSTANCES -eq 0 ]; then
+		writelog "E" "Failed to start webserver!"
 	else
-		writelog "I" "Script modified, do not start webserver in this instance... Please wait for reloading."
+		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
+		writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
+		notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
+		notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
 	fi
+#	else
+#		writelog "I" "Script modified, do not start webserver in this instance... Please wait for reloading."
+#	fi
 }
 
 
@@ -372,6 +375,8 @@ read_config() {
 	read_config_value "WEBSERVER_SHUTDOWN_WEBSITE" "shutdown initialized" "content of html feedback page (valaue: $)" 1 1
 	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN_START" "Shutdown Websever initialized..." "notification message if webserver is initialized (valaue: $)" 1 1
 	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN" "Shutdown of system initialized by webserver" "notification message if shutdown initialized by webserver (valaue: $)" 1 1
+	read_config_value "WEBSERVER_MAGICKEY" "$MY_WEBSERVER_MAGICKEY_GENERATED" "Permanent magic key to access websever by IFTTT; sync with web request URL in receipe (value: $)" 0 1
+	read_config_value "WEBSERVER_MAGICWORD" "abracadabra" "Permanent magic word to access websever by IFTTT; advice: change this to sometineg else (value: $)" 0 1
 
 	# after each config (re)load the webserver has to be starten
 	# ########################################################
