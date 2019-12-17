@@ -156,11 +156,17 @@ init_webserver_shutdown(){
 
 	if [ $WEBSERVER_INSTANCES -eq 0 ]; then
 		writelog "E" "Failed to start webserver!"
+		SHUTDOWN_LINK_USER="***failed to start server***"
+		SHUTDOWN_LINK_HA="***failed to start server***"
 	else
-		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
-		writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
+		SHUTDOWN_LINK_USER="http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
+		SHUTDOWN_LINK_USER_INTERNAL="http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL"
+		SHUTDOWN_LINK_HA="http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$WEBSERVER_MAGICKEY/$WEBSERVER_MAGICWORD"
+
+		writelog "I" "Shutdown webserver (external call) set to '$SHUTDOWN_LINK_USER'"
+		writelog "I" "Shutdown webserver (local call) set to '$SHUTDOWN_LINK_USER_INTERNAL'"
 		notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
-		notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
+		notification "$MYNAME" "$SHUTDOWN_LINK_USER"
 	fi
 #	else
 #		writelog "I" "Script modified, do not start webserver in this instance... Please wait for reloading."
@@ -547,6 +553,9 @@ replace_placeholder()
 
 	local SYS_UPTIME_HUMAN=$(awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime)
 	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
+
+	retvar=${retvar//#SHUTDOWN_LINK_USER#/$SHUTDOWN_LINK_USER}
+	retvar=${retvar//#SHUTDOWN_LINK_HA#/$SHUTDOWN_LINK_HA}
 
 	echo "$retvar"
 }
