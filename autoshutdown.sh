@@ -164,7 +164,7 @@ init_webserver_shutdown(){
 #	SCRIPT_MODIFIED=$(check_hash_script_modified)
 #	if [ $SCRIPT_MODIFIED -eq 0 ]; then
 	# shutdown all previous instances
-	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep "$WEBSERVER_SHUTDOWN_SCRIPT"|wc -l)
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep -c "$WEBSERVER_SHUTDOWN_SCRIPT")
 	while [[ $WEBSERVER_INSTANCES -ne 0 ]]; do
 		writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
 		pkill -f "$WEBSERVER_SHUTDOWN_SCRIPT" >/dev/null 2>&1
@@ -389,9 +389,7 @@ read_config_value(){
 		if [ "$MY_INIT_CONFIG" != "0" ]; then
 			# string not found
 			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
-			echo >>"$CONFIGFILE"
-			echo "; [$MY_VAR] $MY_DESCRIPTION" >>"$CONFIGFILE"
-			echo "$MY_VAR=$MY_DEFAULT" >>"$CONFIGFILE"
+			{ echo ; echo "; [$MY_VAR] $MY_DESCRIPTION" >>"$CONFIGFILE" ; echo "$MY_VAR=$MY_DEFAULT" >>"$CONFIGFILE"; } >>"$CONFIGFILE"
 		fi
 	fi
 
