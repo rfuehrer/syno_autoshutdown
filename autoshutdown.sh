@@ -21,9 +21,8 @@ specific language governing permissions and limitations
 under the License.
 '
 
-THISDIR=$(dirname $0)
-THISDIR=$(dirname $(realpath $0))
-PARAMS=$1
+THISDIR=$(dirname "$0")
+THISDIR=$(dirname "$(realpath "$0")")
 
 # ------- DO NOT EDIT BEFORE THIS LINE -------
 # VARIABLES TO EDIT
@@ -41,8 +40,8 @@ PARAMS=$1
 # ########################################################
 # ########################################################
 APP_NAME="Syno Autoshutdown"
-APP_VERSION="2.1"
-APP_DATE="28.12.2019"
+APP_VERSION="2.2"
+APP_DATE="05.01.2020"
 APP_SOURCE="https://github.com/rfuehrer/syno_autoshutdown/"
 
 SLEEP_TIMER=10
@@ -73,11 +72,10 @@ LOG_TIMESTAMP_FORMAT_DATETIME=$(date +%Y%m%d_%H%M%S)
 LOG_TIMESTAMP_FORMAT_DATE=$(date +%Y%m%d)
 LOG_TIMESTAMP_FORMAT_TIME=$(date +%H%M%S)
 MY_PRIMARY_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
-MY_SCAN_RANGE=$(echo $MY_PRIMARY_IP | cut -d. -f-3)
+MY_SCAN_RANGE=$(echo "$MY_PRIMARY_IP" | cut -d. -f-3)
 MY_START_TIME=$(date +"%d.%m.%Y %H:%M:%S")
 MY_HOSTNAME=$(hostname)
 SCRIPTFILE=$(basename "$0")
-TEMPDIR=$THISDIR
 if [ "z$MY_HOSTNAME" != "z" ]; then
     CONFIGFILE="autoshutdown-$MY_HOSTNAME.config"
 	if [ ! -f "$THISDIR/$CONFIGFILE" ]; then
@@ -85,9 +83,9 @@ if [ "z$MY_HOSTNAME" != "z" ]; then
     	CONFIGFILE="autoshutdown.config"
 	fi
 fi
-SCRIPTFILE=$THISDIR/$SCRIPTFILE
-CONFIGFILE=$THISDIR/$CONFIGFILE
-HASHFILE=$THISDIR/$HASHFILE
+SCRIPTFILE="$THISDIR/$SCRIPTFILE"
+CONFIGFILE="$THISDIR/$CONFIGFILE"
+HASHFILE="$THISDIR/$HASHFILE"
 
 # reset color
 COLOR_NC="\033[0m"
@@ -169,29 +167,29 @@ init_webserver_shutdown(){
 	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
 	while [[ $WEBSERVER_INSTANCES -ne 0 ]]; do
 		writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
-		pkill -f $WEBSERVER_SHUTDOWN_SCRIPT >/dev/null 2>&1
+		pkill -f "$WEBSERVER_SHUTDOWN_SCRIPT" >/dev/null 2>&1
 		sleep 2
-		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep -c "$WEBSERVER_SHUTDOWN_SCRIPT")
 	done
 	sleep 5
 
-	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep -c "$WEBSERVER_SHUTDOWN_SCRIPT")
 	WEBSERVER_STARTUP_FAILED=0
 	WEBSERVER_STARTUP_COUNTER=0
 	writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
 	while [[ $WEBSERVER_STARTUP_FAILED -eq 0 ]] && [[ $WEBSERVER_INSTANCES -eq 0 ]]; do
 		WEBSERVER_STARTUP_COUNTER=$((WEBSERVER_STARTUP_COUNTER+1))
 
-		if [ $WEBSERVER_INSTANCES -eq 0 ]; then 
-			PYTHON_EXEC=$(which python)
-			$PYTHON_EXEC "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL --magickey "$WEBSERVER_MAGICKEY" --magicword "$WEBSERVER_MAGICWORD" --rpath "$WEBSERVER_DMSS_RESET_URL" &
+		if [ "$WEBSERVER_INSTANCES" -eq 0 ]; then 
+			PYTHON_EXEC=$(command -v python)
+			"$PYTHON_EXEC" "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port "$WEBSERVER_SHUTDOWN_PORT" --uuid "$MY_UUID" --spath "$WEBSERVER_SHUTDOWN_URL" --tpath "$WEBSERVER_TEST_URL" --magickey "$WEBSERVER_MAGICKEY" --magicword "$WEBSERVER_MAGICWORD" --rpath "$WEBSERVER_DMSS_RESET_URL" &
 		fi
 		
 		sleep 2
-		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+		WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep -c "$WEBSERVER_SHUTDOWN_SCRIPT")
 		writelog "I" "Waiting for webserver to start (instances=$WEBSERVER_INSTANCES; loop=$WEBSERVER_STARTUP_COUNTER)"
 
-		if [ $WEBSERVER_STARTUP_COUNTER -gt 5 ]; then
+		if [ "$WEBSERVER_STARTUP_COUNTER" -gt 5 ]; then
 			WEBSERVER_STARTUP_FAILED=1
 		fi
 	done
@@ -221,7 +219,8 @@ init_webserver_shutdown(){
 #   hostname
 #######################################
 get_hostname_from_ip(){
-	local RET=$(arp -a|grep $1|awk '{print $1}'|cut -d. -f1)
+	local RET
+	RET=$(arp -a|grep "$1"|awk '{print $1}'|cut -d. -f1)
 	echo "$RET"
 }
 
@@ -235,8 +234,9 @@ get_hostname_from_ip(){
 #   lower case converted string
 #######################################
 string_to_lower(){
-	local RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-	echo $RET
+	local RET
+	RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+	echo "$RET"
 }
 
 
@@ -374,29 +374,29 @@ read_config_value(){
 	local RET
 	RET=""
 
-	if grep -q "^$MY_VAR" $CONFIGFILE
+	if grep -q "^$MY_VAR" "$CONFIGFILE"
 	then
 		# string found
-		RET=$(cat $CONFIGFILE | grep "^$MY_VAR=" | cut -d= -f2)
+		RET=$(cat "$CONFIGFILE" | grep "^$MY_VAR=" | cut -d= -f2)
 #		: "${ACTIVE_STATUS:=1}"
 		if [ "$RET" == "" ];then
-			[ $MY_OUTPUT == "1" ] && writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
-			RET=$MY_DEFAULT
+			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
+			RET="$MY_DEFAULT"
 		fi
 	else
 		RET=$MY_DEFAULT
 		if [ "$MY_INIT_CONFIG" != "0" ]; then
 			# string not found
-			[ $MY_OUTPUT == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
-			echo "" >>$CONFIGFILE
-			echo "; [$MY_VAR] $MY_DESCRIPTION" >>$CONFIGFILE
-			echo "$MY_VAR=$MY_DEFAULT" >>$CONFIGFILE
+			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
+			echo "" >>"$CONFIGFILE"
+			echo "; [$MY_VAR] $MY_DESCRIPTION" >>"$CONFIGFILE"
+			echo "$MY_VAR=$MY_DEFAULT" >>"$CONFIGFILE"
 		fi
 	fi
 
 	# set dynamic variable name to read content
 	eval $MY_VAR=\$RET
-	[ $MY_OUTPUT == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
+	[ "$MY_OUTPUT" == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
 }
 
 #######################################
@@ -435,8 +435,8 @@ read_config_value(){
 #	$MESSAGE_STATUS_CHANGE_INV
 #######################################
 read_config() {
-  local MD5_HASH_SAVED=$(cat $HASHFILE)
-  local MD5_HASH_CONFIG=$(md5sum $CONFIGFILE| cut -d ' ' -f 1)
+  local MD5_HASH_SAVED=$(cat "$HASHFILE")
+  local MD5_HASH_CONFIG=$(md5sum "$CONFIGFILE"| cut -d ' ' -f 1)
   
   writelog "D" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
   writelog "D" "Config hash - actual hash value: $MD5_HASH_CONFIG"
@@ -446,7 +446,7 @@ read_config() {
     writelog "W" "Config hash - config modified, reload config"
 
     # save new hash value
-    echo $MD5_HASH_CONFIG > $HASHFILE
+    echo "$MD5_HASH_CONFIG" > "$HASHFILE"
 
 	# reset DMSS vars to prevent execution of existing grace periods and changed config vars
 	DMSS_ACTIVE=0
@@ -492,10 +492,10 @@ read_config() {
 	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines (value: # [1000])" 1 1
 	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days (value: # [3])" 1 1
 	read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $ [autoshutdown.log])" 1 1
-	LOGFILE=$(replace_logfilename_placeholder $LOGFILE_FILENAME)
-	LOGFILE=$THISDIR/$LOGFILE
+	LOGFILE=$(replace_logfilename_placeholder "$LOGFILE_FILENAME")
+	LOGFILE="$THISDIR/$LOGFILE"
 	read_config_value "SCRIPT_DEV_FILENAME" "autoshutdown.sh.txt" "define script filename for edited version (copies from this file to running script at start of loop; prevents text file busy errors) (value: $)" 1 1
-	SCRIPTFILE_DEV=$THISDIR/$SCRIPT_DEV_FILENAME
+	SCRIPTFILE_DEV="$THISDIR/$SCRIPT_DEV_FILENAME"
 
 	read_config_value "IFTTT_KEY" "" "IFTTT magic key for webhook notifications (value: $)" 0 1
 	read_config_value "IFTTT_EVENT" "" "IFTTT event name for notifications (value: $)" 1 1
@@ -557,7 +557,7 @@ read_config() {
 	# after each config (re)load the webserver has to be starten
 	# ########################################################
 	# # WEBSERVER START
-	if [ $WEBSERVER_SHUTDOWN_ACTIVE -eq 1 ];then
+	if [ "$WEBSERVER_SHUTDOWN_ACTIVE" -eq 1 ];then
 		init_webserver_shutdown
 	fi
 
@@ -579,10 +579,11 @@ read_config() {
 #######################################
 check_pidhash(){
 
-	if [ -f $SCRIPTFILE_DEV ]; then
-    	local MD5_HASHSCRIPT_DEV=$(md5sum $SCRIPTFILE_DEV| cut -d ' ' -f 1)
+	if [ -f "$SCRIPTFILE_DEV" ]; then
+    	local MD5_HASHSCRIPT_DEV
+		MD5_HASHSCRIPT_DEV=$(md5sum "$SCRIPTFILE_DEV"| cut -d ' ' -f 1)
 
-		if [ ! -f $HASHSCRIPTFILE_DEV ]; then
+		if [ ! -f "$HASHSCRIPTFILE_DEV" ]; then
 			# two ecos required, because one alone seems to be ignored
 			echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
 			writelog "I" "Script (dev) hash - init new hash"
@@ -590,7 +591,7 @@ check_pidhash(){
 			echo "$MD5_HASHSCRIPT_DEV" > "$HASHSCRIPTFILE_DEV"
 			writelog "I" "Script (dev) hash - hash value confirmed. No action needed."
 		else
-			MD5_HASHSCRIPT_DEV_SAVED=$(cat $HASHSCRIPTFILE_DEV)
+			MD5_HASHSCRIPT_DEV_SAVED=$(cat "$HASHSCRIPTFILE_DEV")
 			writelog "D" "Script (dev) hash - actual hash value: $MD5_HASHSCRIPT_DEV"
 			writelog "D" "Script (dev) hash - saved hash value : $MD5_HASHSCRIPT_DEV_SAVED"
 
@@ -614,17 +615,18 @@ check_pidhash(){
 		fi
 	else
 		writelog "I" "Script (dev) - dev file not present. No action needed."
-		rm $HASHSCRIPTFILE_DEV 2>/dev/null
+		rm "$HASHSCRIPTFILE_DEV" 2>/dev/null
 	fi
 
-    local MD5_HASHSCRIPT=$(md5sum $SCRIPTFILE| cut -d ' ' -f 1)
+    local MD5_HASHSCRIPT
+	MD5_HASHSCRIPT=$(md5sum "$SCRIPTFILE"| cut -d ' ' -f 1)
     # first run?
-    if [ ! -f $HASHSCRIPTFILE ]; then
+    if [ ! -f "$HASHSCRIPTFILE" ]; then
         writelog "I" "Script hash - init new hash"
-        echo $MD5_HASHSCRIPT > $HASHSCRIPTFILE
+        echo "$MD5_HASHSCRIPT" > "$HASHSCRIPTFILE"
     fi
 
-    MD5_HASHSCRIPT_SAVED=$(cat $HASHSCRIPTFILE)
+    MD5_HASHSCRIPT_SAVED=$(cat "$HASHSCRIPTFILE")
     writelog "D" "Script hash : $SCRIPTFILE"
     writelog "D" "Script hash - actual hash value: $MD5_HASHSCRIPT"
     writelog "D" "Script hash - saved hash value : $MD5_HASHSCRIPT_SAVED"
@@ -632,8 +634,8 @@ check_pidhash(){
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
         # do something
         writelog "W" "Script hash - script modified, restart script"
-        rm $HASHSCRIPTFILE
-        $0 "$@" &
+        rm "$HASHSCRIPTFILE"
+        "$0" "$@" &
         exit 0
     else
         writelog "I" "Script hash - hash value confirmed. No action needed."
@@ -650,7 +652,8 @@ check_pidhash(){
 #   -
 #######################################
 beeps() {
-	local BEEPS_NUM=$1
+	local BEEPS_NUM
+	BEEPS_NUM="$1"
 	
 	for i in {1..$BEEPS_NUM}
 	do
@@ -702,7 +705,8 @@ replace_logfilename_placeholder()
 #######################################
 replace_placeholder()
 {
-	local retvar="$1"
+	local retvar
+	retvar="$1"
 
 	# replace placeholders with variable content
 	retvar=${retvar//#VALID_MARKER_SYSTEMS_LIST#/$VALID_MARKER_SYSTEMS_LIST}
@@ -712,7 +716,8 @@ replace_placeholder()
 	retvar=${retvar//#RUNLOOP_COUNTER#/$RUNLOOP_COUNTER}
 
 	# note: loops * sleep_time
-	local RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
+	local RUNLOOP_TIME
+	RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
 	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
 	#local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
 	#local RUNLOOP_TIME_DAYS=$(((RUNLOOP_TIME_SECS/60*60)/24))
@@ -723,8 +728,10 @@ replace_placeholder()
 	RUNLOOP_SECONDS_HUMAN=$(sec_to_time "$RUNLOOP_TIME" "long")
 	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/$RUNLOOP_SECONDS_HUMAN}
 
-	local SYS_UPTIME=$(awk '{print int($1)}' /proc/uptime)
-	SYS_UPTIME_HUMAN=$(sec_to_time $SYS_UPTIME "long")
+	local SYS_UPTIME
+	SYS_UPTIME=$(awk '{print int($1)}' /proc/uptime)
+	local SYS_UPTIME_HUMAN
+	SYS_UPTIME_HUMAN=$(sec_to_time "$SYS_UPTIME" "long")
 	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
 
 	retvar=${retvar//#WEBSERVER_URL_SHUTDOWN#/http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL}
@@ -748,16 +755,17 @@ replace_placeholder()
 #######################################
 writelog()
 {
-	local NOW=$(date +"%d.%m.%Y %H:%M:%S")
-	local MSGLEVEL=$1
-	local MSG=$2
+	local NOW
+	NOW=$(date +"%d.%m.%Y %H:%M:%S")
+	local MSGLEVEL="$1"
+	local MSG="$2"
 
 	# only output if NOT a "D" message or in debug mode
-	if [ $MSGLEVEL != "D" ] || [ $DEBUG_MODE -eq 1 ]; then
+	if [ "$MSGLEVEL" != "D" ] || [ "$DEBUG_MODE" -eq 1 ]; then
 		# use color output?
 		if [ "$USE_INTERACTIVE_COLOR" == "1" ];then
 			[ "$COLOR_PID" != "" ] && PID_CONSOLE="${COLOR_PID}$PID${COLOR_NC}"
-			case $MSGLEVEL in
+			case "$MSGLEVEL" in
 				D)
 					[ "$COLOR_DEBUG" != "" ] && MSGLEVEL_CONSOLE="${COLOR_DEBUG}$MSGLEVEL${COLOR_NC}"
 					;;
@@ -777,16 +785,15 @@ writelog()
 		fi
 
 		# log output
-		echo "$NOW [$PID] [$MSGLEVEL] - $MSG" >>$LOGFILE
+		echo "$NOW [$PID] [$MSGLEVEL] - $MSG" >>"$LOGFILE"
 	fi
 
 	# shorten logfile to max line number if not set to zero (0)
 	if [ $LOGFILE_MAXLINES -ne 0 ]; then
 		# log rotate dynamic logfile
-		COUNT_LINES=$(wc -l < "$LOGFILE")
-		tail -n $LOGFILE_MAXLINES $LOGFILE >$LOGFILE.temp
-		rm $LOGFILE
-		mv $LOGFILE.temp $LOGFILE
+		tail -n "$LOGFILE_MAXLINES" "$LOGFILE" >"$LOGFILE.temp"
+		rm "$LOGFILE"
+		mv "$LOGFILE.temp" "$LOGFILE"
 	fi
 }
 
@@ -804,7 +811,7 @@ dsm_notification()
 	local MY_MESSAGE=$1
 
 	DSMNOTIFY_EXISTS=$(command -v synodsmnotify|wc -l)
-	if [ $DSMNOTIFY_EXISTS -eq 1 ]; then
+	if [ "$DSMNOTIFY_EXISTS" -eq 1 ]; then
 		writelog "I" "DSM notification sent"
 		synodsmnotify "@administrators" "$APP_NAME" "$MY_MESSAGE"
 	fi
@@ -823,8 +830,8 @@ dsm_notification()
 #######################################
 notification()
 {
-	local MY_IDENTIFIER=$1
-	local MY_MESSAGE=$2
+	local MY_IDENTIFIER="$1"
+	local MY_MESSAGE="$2"
 
 	if [ "x$IFTTT_KEY" != "x" ]; then
 		if [ "x$IFTTT_EVENT" != "x" ]; then
@@ -834,7 +841,7 @@ notification()
 				writelog "D" "IFTTT Notification EVENT :$IFTTT_EVENT"
 				writelog "D" "IFTTT Notification KEY   : $IFTTT_KEY"
 				writelog "D" "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
-				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$APP_NAME: $MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY >/dev/null 2>&1
+				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$APP_NAME: $MY_IDENTIFIER - $MY_MESSAGE\"}" "https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY" >/dev/null 2>&1
 				writelog "I" "IFTTT Notification sent: $MY_MESSAGE"
 
 				dsm_notification "$MY_MESSAGE"
@@ -865,22 +872,22 @@ is_network_in_use() {
     COUNT_HIGH=0
     BYTES_DIFF_MAX=0
     #BYTES=$(ifconfig $NW_DEVICE|grep "TX bytes"|cut -d ":" -f 3|cut -d " " -f 1)
-    BYTES=$(cat /sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes)
+    BYTES=$(cat "/sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes")
     for i in {0..10}
     do
 #    while true; do 
-        BYTES_SAVE=$BYTES
+        BYTES_SAVE="$BYTES"
         #BYTES=$(ifconfig $NW_DEVICE|grep "TX bytes"|cut -d ":" -f 3|cut -d " " -f 1)
-        BYTES=$(cat /sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes)
+        BYTES=$(cat "/sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes")
         BYTES_DIFF=$((BYTES-BYTES_SAVE))
         DIFF_CODE="NORMAL"
-        if [ $BYTES_DIFF -gt $BYTES_DIFF_MAX ]; then
+        if [ "$BYTES_DIFF" -gt "$BYTES_DIFF_MAX" ]; then
             BYTES_DIFF_MAX=$BYTES_DIFF
         fi
-        if [ $BYTES_DIFF -lt $NETWORK_USAGE_INTERFACE_MIN_BYTES ];then
+        if [ "$BYTES_DIFF" -lt "$NETWORK_USAGE_INTERFACE_MIN_BYTES" ];then
             DIFF_CODE="  LOW"
         fi
-        if [ $BYTES_DIFF -gt $NETWORK_USAGE_INTERFACE_MAX_BYTES ];then
+        if [ "$BYTES_DIFF" -gt "$NETWORK_USAGE_INTERFACE_MAX_BYTES" ];then
             DIFF_CODE=" HIGH "
             COUNT_HIGH=$((COUNT_HIGH+1))
         fi
@@ -888,7 +895,7 @@ is_network_in_use() {
         #echo "$BYTES ($BYTES_DIFF) $DIFF_CODE (max: $BYTES_DIFF_MAX)" >>/volume1/control/syno_autoshutdown/net.txt
         sleep 1
     done
-    if [ $COUNT_HIGH -ge $NETWORK_USAGE_INTERFACE_PROBES_POSITIVE ]; then
+    if [ "$COUNT_HIGH" -ge "$NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" ]; then
         echo 1
     else
         echo 0
@@ -910,12 +917,13 @@ restart_loop() {
 	MAXLOOP_COUNTER=0
 	writelog "I" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 	### Trim whitespaces ###
-	VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
+	VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
 	# replace spaces with ", "
 	VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
 
-	RETURN_VAR=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
-	writelog "I" "$RETURN_VAR"
+	local RET
+	RET=$(replace_placeholder "Found system names: #VALID_MARKER_SYSTEMS_LIST#")
+	writelog "I" "$RET"
 }
 
 #######################################
@@ -931,15 +939,16 @@ restart_loop() {
 #   -
 #######################################
 notify_restart_loop() {
+	local RET
 	if [ $MAXLOOP_COUNTER -ne 0 ]; then
 		if [ $RUNLOOP_COUNTER -gt 1 ]; then
 		writelog "I" "--> status change (not found -> found)"
 			# only send notification after first loop
-			if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
-				RETURN_VAR=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_VAL")
+			if [ "$NOTIFY_ON_STATUS_CHANGE" -eq "1" ];then
+				RET=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_VAL")
 				writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_VAL)"
-				notification "$MYNAME" "$RETURN_VAR"
-				writelog "I" "Notification sent: $RETURN_VAR"
+				notification "$MYNAME" "$RET"
+				writelog "I" "Notification sent: $RET"
 			fi
 		fi
 	fi
@@ -960,8 +969,8 @@ notify_stop_loop() {
 #fi
 
 read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $)" 0 0
-LOGFILE=$(replace_logfilename_placeholder $LOGFILE_FILENAME)
-LOGFILE=$THISDIR/$LOGFILE
+LOGFILE=$(replace_logfilename_placeholder "$LOGFILE_FILENAME")
+LOGFILE="$THISDIR/$LOGFILE"
 
 # ########################################################
 # # INTRO HEADER
@@ -979,7 +988,7 @@ writelog "I" "own primary ip: $MY_PRIMARY_IP"
 writelog "I" "scan ip range : $MY_SCAN_RANGE.*"
 
 writelog "I" "Removing old (7 days) logs"
-DUMMY=$(find $THISDIR/ -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;)
+DUMMY=$(find "$THISDIR/" -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdown_*.log' -exec rm {} \;)
 
 # ########################################################
 # # COMMANDLINE PARAMETER
@@ -992,11 +1001,11 @@ while true ; do
         -v|--verbose)
             case "$2" in
                 "") ARG_A='some default value' ; shift 2 ;;
-                *) ARG_A=$2 ; shift 2 ;;
+                *) ARG_A="$2" ; shift 2 ;;
             esac ;;
         -v|--verbose) OPT_VERBOSE=1 ; shift ;;
         -k|--killall) OPT_KILLALL=1 ; shift ;;
-		-r|--resetlog) OPT_RESETLOG = 1; shift;;
+		-r|--resetlog) OPT_RESETLOG=1; shift;;
         --) shift ; break ;;
         *) break ;;
     esac
@@ -1014,14 +1023,14 @@ fi
 
 # resetlog: resets the log only at start to get en empty log. other options are still valid
 if [ $OPT_RESETLOG -eq 1 ]; then
-	rm $LOGFILE
-	OPT_RESETLOG = 0
+	rm "$LOGFILE"
+	OPT_RESETLOG=0
 fi
 
 # ########################################################
 # # MAIN LOOP
 # cleanup hash file (create new configfile)
-rm $HASHFILE
+rm "$HASHFILE"
 # main loop
 
 while true; do
@@ -1066,11 +1075,11 @@ while true; do
 		writelog "D" "Check file exists: $THISDIR/$DMSS_RESET_FILENAME"
 		if [ -f "$THISDIR/$DMSS_RESET_FILENAME" ]; then
 			writelog "I" "Forced shutdown grace timer was reset by user"
-			rm $THISDIR/$DMSS_RESET_FILENAME
+			rm "$THISDIR/$DMSS_RESET_FILENAME"
 			DMSS_ACTIVE=0
 			DMSS_ACTIVE_COUNTER=0
 		fi
-		if [ $DMSS_ACTIVE_COUNTER -ge $DMSS_EXECUTE_AFTER_GRACE ]; then
+		if [ $DMSS_ACTIVE_COUNTER -ge "$DMSS_EXECUTE_AFTER_GRACE" ]; then
 			notification "$MYNAME" "$MESSAGE_DMSS_EXECUTE_NOTIFY"
 			writelog "W" "System is going to be shutdown by deadman's switch"
 			poweroff
@@ -1078,27 +1087,27 @@ while true; do
 	fi
 
 
-	if [ $ACTIVE_STATUS != "1" ]; then
+	if [ $ACTIVE_STATUS -ne 1 ]; then
 		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
 	else
 		writelog "I" "Checking systems (loop $MAXLOOP_COUNTER of $SLEEP_MAXLOOP; $SLEEP_TIMER seconds waiting time)"
 
 		# get all online IP addresses
-		FOUND_HOSTS=$(for i in {1..254} ;do (ping $MY_SCAN_RANGE.$i -c 1 -w 5  >/dev/null && echo "$MY_SCAN_RANGE.$i" &) ;done)
+		FOUND_HOSTS=$(for i in {1..254} ;do (ping "$MY_SCAN_RANGE.$i" -c 1 -w 5  >/dev/null && echo "$MY_SCAN_RANGE.$i" &) ;done)
 		# search local network
 		for FOUND_IP in $FOUND_HOSTS
 		do
 			# match marker systems with online systems (IP based)
 			# note: space is important to find this IP (CHECKHOSTS has an additional space at end)
 
-			if [[ $CHECKHOSTS =~ "$FOUND_IP " ]]; then
+			if [[ "$CHECKHOSTS" =~ "$FOUND_IP " ]]; then
 #			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					# -----------------------------------------------
 					# IP check
 					# -----------------------------------------------
 					DUMMY="System (IP)"
 					VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_IP "
-					FOUND_SYS=$(get_hostname_from_ip $FOUND_IP)
+					FOUND_SYS=$(get_hostname_from_ip "$FOUND_IP")
 					FOUND_SYS=$(string_to_lower "$FOUND_SYS")
 					DUMMY="$DUMMY [$FOUND_IP -> $FOUND_SYS] - valid marker system"
 					FOUND_SYSTEMS=$((FOUND_SYSTEMS+1))
@@ -1108,8 +1117,8 @@ while true; do
 				# HOSTNAME check
 				# -----------------------------------------------
 				# match marker systems with online systems (IP translated in hostname)
-				FOUND_SYS=$(nslookup $FOUND_IP | awk '/name/ {split ($4,elems,"."); print elems[1]}')
-				if [ $CHECKHOSTS_IGNORE_MULTI_HOSTNAMES -eq 1 ]; then
+				FOUND_SYS=$(nslookup "$FOUND_IP" | awk '/name/ {split ($4,elems,"."); print elems[1]}')
+				if [ "$CHECKHOSTS_IGNORE_MULTI_HOSTNAMES" -eq 1 ]; then
 					# ignore all names except the first one.
 					FOUND_SYS=$(echo "$FOUND_SYS"|head -n 1)
 				fi
@@ -1118,11 +1127,11 @@ while true; do
 				# find multi hostname systems (e.g. fritzbox)
 				FOUND_SYS_LINES=$(echo "$FOUND_SYS"|wc -l)
 				# check valid ip address (vs. multiple hostnames)
-				if [[ $FOUND_SYS_LINES -eq 1 ]]; then
+				if [[ "$FOUND_SYS_LINES" -eq 1 ]]; then
 					# only accept single-line matches (unique hostnames)
-					if [ ! -z $FOUND_SYS ]; then
-						CHECKHOSTS=$(echo $CHECKHOSTS | tr '[A-Z]' '[a-z]')
-						FOUND_SYS=$(echo $FOUND_SYS | tr '[A-Z]' '[a-z]')
+					if [ ! -z "$FOUND_SYS" ]; then
+						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr '[A-Z]' '[a-z]')
+						FOUND_SYS=$(echo "$FOUND_SYS" | tr '[A-Z]' '[a-z]')
 						DUMMY="System '$FOUND_SYS' "
 						if grep -q "$FOUND_SYS" <<< "$CHECKHOSTS" ; then
 							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
@@ -1152,12 +1161,12 @@ while true; do
 			# one or more systems found?
 			# -----------------------------------------------
 			# special check: test network usage - if low, system in connected but not using the NAS
-			if [ $FOUND_SYSTEMS -eq 1 ]; then
+			if [ "$FOUND_SYSTEMS" -eq 1 ]; then
 				# -----------------------------------------------
 				# just one system in list?
 				# -----------------------------------------------
-				VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
-				if [[ $CHECKHOSTS_DEEPSLEEP =~ "$VALID_MARKER_SYSTEMS_LIST" ]]; then
+				VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
+				if [[ $CHECKHOSTS_DEEPSLEEP =~ $VALID_MARKER_SYSTEMS_LIST ]]; then
 					# -----------------------------------------------
 					# just one last deep sleep system!
 					# -----------------------------------------------
@@ -1166,7 +1175,7 @@ while true; do
 
 					writelog "I" "Checking network usage... Waiting..."
 					NETWORK_USEAGE_CHECK=$(is_network_in_use)
-					if [ $NETWORK_USEAGE_CHECK -eq 1 ]; then
+					if [ "$NETWORK_USEAGE_CHECK" -eq 1 ]; then
 						# network has high usage
 						writelog "I" "Network usage is high."
 						restart_loop
@@ -1199,7 +1208,7 @@ while true; do
 				writelog "I" "--> status change (found -> not found)"
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
 					# only send notification after first loop
-					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+					if [ $NOTIFY_ON_STATUS_CHANGE -eq 1 ];then
 						RETURN_VAR=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_INV")
 						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_INV)"
 						notification "$MYNAME" "$RETURN_VAR"
@@ -1215,11 +1224,11 @@ while true; do
 		# -----------------------------------------------
 		# counter > grace timer?
 		# -----------------------------------------------
-		if [ $MAXLOOP_COUNTER -ge $GRACE_TIMER ];then
+		if [ "$MAXLOOP_COUNTER" -ge $GRACE_TIMER ];then
 			# counter = grace timer?
-			if [ $MAXLOOP_COUNTER -eq $GRACE_TIMER ];then
+			if [ "$MAXLOOP_COUNTER" -eq $GRACE_TIMER ];then
 				# send notification
-				if [ $NOTIFY_ON_GRACE_START -eq "1" ];then
+				if [ "$NOTIFY_ON_GRACE_START" -eq 1 ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_START)"
 					MESSAGE_GRACE_START_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_START")
 					notification "$MYNAME" "$MESSAGE_GRACE_START_NOTIFY"
@@ -1227,7 +1236,7 @@ while true; do
 				fi
 			else
 				# send notification on every ... ?
-				if [ $NOTIFY_ON_GRACE_EVERY -eq "1" ];then
+				if [ "$NOTIFY_ON_GRACE_EVERY" -eq 1 ];then
 					writelog "I" "Sending notification (NOTIFY_ON_GRACE_EVERY)"
 					MESSAGE_GRACE_EVERY_NOTIFY=$(replace_placeholder "$MESSAGE_GRACE_EVERY")
 					notification "$MYNAME" "$MESSAGE_GRACE_EVERY_NOTIFY"
@@ -1236,8 +1245,8 @@ while true; do
 			fi
 			
 			# beep on every loop in grace period?
-			if [ $GRACE_BEEP == "1" ];then
-				beeps $GRACE_BEEP_COUNT
+			if [ "$GRACE_BEEP" -eq 1 ];then
+				beeps "$GRACE_BEEP_COUNT"
 			fi
 		fi
 
@@ -1246,7 +1255,7 @@ while true; do
 		RUNLOOP_COUNTER_HRF=$(sec_to_time "$RUNLOOP_COUNTER_TIME" "long")
 
 		SYS_UPTIME_SECONDS=$(awk '{print int($1)}' /proc/uptime)
-		SYS_UPTIME_HUMAN=$(sec_to_time $SYS_UPTIME_SECONDS "long")
+		SYS_UPTIME_HUMAN=$(sec_to_time "$SYS_UPTIME_SECONDS" "long")
 
 		writelog "I" "#####################################################"
 		writelog "I" "#####"
@@ -1274,20 +1283,20 @@ while true; do
 		writelog "I" "#####################################################"
 
 		# check if loop > maxloop?
-		if [ $MAXLOOP_COUNTER -ge $SLEEP_MAXLOOP ]; then
+		if [ "$MAXLOOP_COUNTER" -ge $SLEEP_MAXLOOP ]; then
 			# check if still no system found
 #			if [ $FOUND_SYSTEMS -eq 0 ]; then
 #				writelog "I" "STATUS: All systems still offline!"
 			writelog "I" "Shutting down this system... Sleep well :)"
 			# send notification on system shutdown?
-			if [ $NOTIFY_ON_SHUTDOWN -eq "1" ];then
+			if [ "$NOTIFY_ON_SHUTDOWN" -eq 1 ];then
 				MESSAGE_SLEEP=$(replace_placeholder "$MESSAGE_SLEEP")
 				notification "$MYNAME" "$MESSAGE_SLEEP"
 				writelog "I" "Notification sent: $MESSAGE_SLEEP"
 			fi
 			# beep on system shutdown?
-			if [ $SHUTDOWN_BEEP == "1" ];then
-				beeps $SHUTDOWN_BEEP_COUNT
+			if [ "$SHUTDOWN_BEEP" -eq 1 ];then
+				beeps "$SHUTDOWN_BEEP_COUNT"
 			fi
 			poweroff
 			writelog "I" "#####################################################"
@@ -1303,6 +1312,6 @@ while true; do
 	fi
 	
 	# sleep till next loop
-	sleep $SLEEP_TIMER
+	sleep "$SLEEP_TIMER"
 
 done;
