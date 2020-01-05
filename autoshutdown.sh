@@ -159,9 +159,8 @@ check_hash_script_modified(){
 # Returns:
 #   
 #######################################
+# shellcheck disable=SC2009
 init_webserver_shutdown(){
-	# shellcheck disable=SC2009
-
 	# check if script file is modified? if true, the webserver would be restarted after reloading/restarting the script
 #	SCRIPT_MODIFIED=$(check_hash_script_modified)
 #	if [ $SCRIPT_MODIFIED -eq 0 ]; then
