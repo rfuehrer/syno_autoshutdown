@@ -40,8 +40,9 @@ PARAMS=$1
 # # DEFAULT VARIABLES
 # ########################################################
 # ########################################################
-APP_VERSION="2.01"
-APP_DATE="30.11.2019"
+APP_NAME="Syno Autoshutdown"
+APP_VERSION="2.1"
+APP_DATE="28.12.2019"
 APP_SOURCE="https://github.com/rfuehrer/syno_autoshutdown/"
 
 SLEEP_TIMER=10
@@ -52,8 +53,11 @@ LOGFILE_CLEANUP_DAYS=7
 DEBUG_MODE=0
 RUNLOOP_COUNTER=0
 MAXLOOP_COUNTER=0
+DMSS_ACTIVE=0
+DMSS_ACTIVE_COUNTER=0
 
 CONFIGFILE=autoshutdown.config
+CONFIGFILE_INI=autoshutdown.config.ini
 HASHFILE=autoshutdown.config.hash
 HASHSCRIPTFILE=autoshutdown.sh.pidhash
 HASHSCRIPTFILE_DEV=autoshutdown.sh-dev.pidhash
@@ -100,6 +104,44 @@ MY_WEBSERVER_MAGICKEY_GENERATED=$(uuidgen|md5sum|cut -d ' ' -f 1)
 
 # -------------------------------------------
 
+#######################################
+# Convert seconds to human readable format
+# Globals:
+#   -
+# Arguments:
+#   $1: seconds
+#   $2: format (long/short)
+# Returns:
+#   
+#######################################
+sec_to_time() {
+    local MY_SECONDS=$1
+	local MY_FORMAT=${2:-short}
+    local sign=""
+	local hours
+	local minutes
+	local seconds
+	local HRF_SECONDS
+	
+    if [[ ${MY_SECONDS:0:1} == "-" ]]; then
+        seconds=${MY_SECONDS:1}
+        sign="-"
+    fi
+    local days=$(( (MY_SECONDS / 3600) / 24))
+    local hours=$(( (MY_SECONDS / 3600) ))
+    local minutes=$(( (MY_SECONDS % 3600) / 60 ))
+    seconds=$(( (MY_SECONDS) % 60 ))
+
+	if [ "$MY_FORMAT" != "long" ]; then
+    	HRF_SECONDS=$(printf "%s%02d:%02d:%02d:%02d" "$sign" $days $hours $minutes $seconds)
+	else
+    	HRF_SECONDS=$(printf "%s%02dd:%02dh:%02dm:%02ds" "$sign" $days $hours $minutes $seconds)
+	fi
+	writelog "D" "Conversion of seconds: $MY_SECONDS => $HRF_SECONDS"
+	echo "$HRF_SECONDS"
+}
+
+
 check_hash_script_modified(){
     MD5_HASHSCRIPT_SAVED=$(cat $HASHSCRIPTFILE)
     if [ "$MD5_HASHSCRIPT_SAVED" != "$MD5_HASHSCRIPT" ]; then
@@ -142,7 +184,7 @@ init_webserver_shutdown(){
 
 		if [ $WEBSERVER_INSTANCES -eq 0 ]; then 
 			PYTHON_EXEC=$(which python)
-			$PYTHON_EXEC "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL --magickey "$WEBSERVER_MAGICKEY" --magicword "$WEBSERVER_MAGICWORD" &
+			$PYTHON_EXEC "$THISDIR/$WEBSERVER_SHUTDOWN_SCRIPT" --port $WEBSERVER_SHUTDOWN_PORT --uuid $MY_UUID --spath $WEBSERVER_SHUTDOWN_URL --tpath $WEBSERVER_TEST_URL --magickey "$WEBSERVER_MAGICKEY" --magicword "$WEBSERVER_MAGICWORD" --rpath "$WEBSERVER_DMSS_RESET_URL" &
 		fi
 		
 		sleep 2
@@ -155,18 +197,12 @@ init_webserver_shutdown(){
 	done
 
 	if [ $WEBSERVER_INSTANCES -eq 0 ]; then
-		writelog "E" "Failed to start webserver!"
-		SHUTDOWN_LINK_USER="***failed to start server***"
-		SHUTDOWN_LINK_HA="***failed to start server***"
+		writelog "W" "Failed to start webserver!"
 	else
-		SHUTDOWN_LINK_USER="http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
-		SHUTDOWN_LINK_USER_INTERNAL="http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL"
-		SHUTDOWN_LINK_HA="http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$WEBSERVER_MAGICKEY/$WEBSERVER_MAGICWORD"
-
-		writelog "I" "Shutdown webserver (external call) set to '$SHUTDOWN_LINK_USER'"
-		writelog "I" "Shutdown webserver (local call) set to '$SHUTDOWN_LINK_USER_INTERNAL'"
-		notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
-		notification "$MYNAME" "$SHUTDOWN_LINK_USER"
+		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
+		writelog "I" "Shutdown webserver (local call) set to 'http://localhost:$WEBSERVER_SHUTDOWN_PORT/$MY_UUID/$WEBSERVER_TEST_URL'"
+		#notification "$MYNAME" "$MESSAGE_WEBSERVER_SHUTDOWN_START"
+		#notification "$MYNAME" "http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL"
 	fi
 #	else
 #		writelog "I" "Script modified, do not start webserver in this instance... Please wait for reloading."
@@ -201,6 +237,118 @@ get_hostname_from_ip(){
 string_to_lower(){
 	local RET=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 	echo $RET
+}
+
+
+#######################################
+# Read/Write value in config file
+# Globals:
+#   $CONFIGFILE
+# Arguments:
+#   $1: variable name
+#	$2: default value
+#	$3: description of variable
+#	$4: output read value to console(log (0/1))
+#	$5: initialize config value if not present (0/1) - a later call with <>0 will initialize missing values
+# Returns:
+#   -
+#######################################
+function ini_val() {
+	# BASH3 Boilerplate: ini_val
+	#
+	# This file:
+	#
+	#  - Can read and write .ini files using pure bash
+	#
+	# Limitations:
+	#
+	#  - All keys inside the .ini file must be unique, regardless of the use of sections
+	#
+	# Usage as a function:
+	#
+	#  source ini_val.sh
+	#  ini_val data.ini connection.host 127.0.0.1
+	#
+	# Usage as a command:
+	#
+	#  ini_val.sh data.ini connection.host 127.0.0.1
+	#
+	# Based on a template by BASH3 Boilerplate v2.4.1
+	# http://bash3boilerplate.sh/#authors
+	#
+	# The MIT License (MIT)
+	# Copyright (c) 2013 Kevin van Zonneveld and contributors
+	# You are not obligated to bundle the LICENSE file with your b3bp projects as long
+	# as you leave these references intact in the header comments of your source files.	
+
+
+	# ini_val $CONFIGFILE $MY_VAR $MY_DEFAULT $MY_DESCRIPTION $MY_OUTPUT $MY_INIT_CONFIG
+
+  local file="${1:-}"
+  local sectionkey="${2:-}"
+  local val="${3:-}"
+  local comment="${4:-}"
+  local delim="="
+  local comment_delim=";"
+  local section=""
+  local key=""
+  local current=""
+  # add default section
+  local section_default="default"
+
+  if [[ ! -f "${file}" ]]; then
+    # touch file if not exists
+    touch "${file}"
+  fi
+
+  # Split on . for section. However, section is optional
+  IFS='.' read -r section key <<< "${sectionkey}"
+  if [[ ! "${key}" ]]; then
+    key="${section}"
+    # default section if not given
+    section="${section_default}"
+  fi
+
+  current=$(sed -En "/^\[/{h;d;};G;s/^${key}([[:blank:]]*)${delim}(.*)\n\[${section}\]$/\2/p" "${file}"|awk '{$1=$1};1')
+
+  if ! grep -q "\[${section}\]" "${file}"; then
+    # create section if not exists (empty line to seperate new section)
+    echo  >> "${file}"
+    echo "[${section}]" >> "${file}"
+  fi
+
+  if [[ ! "${val}" ]]; then
+    # get a value
+    echo "${current}"
+  else
+    # set a value
+    if [[ ! "${current}" ]]; then
+      # doesn't exist yet, add
+      if [[ ! "${section}" ]]; then
+        # if no section is given, propagate the default section
+        section=${section_default}
+      fi
+      # add to section
+      if [[ ! "${comment}" ]]; then
+        # add new key/value without description
+        RET="/\\[${section}\\]/a\\
+${key}${delim}${val}"
+      else
+        # add new key/value with description
+        RET="/\\[${section}\\]/a\\
+${comment_delim}[${key}] ${comment}\\
+${key}${delim}${val}"
+      fi
+      sed -i.bak -e "${RET}" "${file}"
+      # this .bak dance is done for BSD/GNU portability: http://stackoverflow.com/a/22084103/151666
+      rm -f "${file}.bak"
+    else
+      # replace existing (modified to replace only keys in given section)
+      sed -i.bak -e "/^\[${section}\]/,/^\[.*\]/ s|^\(${key}[ \t]*${delim}[ \t]*\).*$|\1${val}|" "${file}"
+      # this .bak dance is done for BSD/GNU portability: http://stackoverflow.com/a/22084103/151666
+      rm -f "${file}.bak"
+    fi
+  fi
 }
 
 #######################################
@@ -245,6 +393,7 @@ read_config_value(){
 			echo "$MY_VAR=$MY_DEFAULT" >>$CONFIGFILE
 		fi
 	fi
+
 	# set dynamic variable name to read content
 	eval $MY_VAR=\$RET
 	[ $MY_OUTPUT == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
@@ -299,6 +448,10 @@ read_config() {
     # save new hash value
     echo $MD5_HASH_CONFIG > $HASHFILE
 
+	# reset DMSS vars to prevent execution of existing grace periods and changed config vars
+	DMSS_ACTIVE=0
+	DMSS_ACTIVE_COUNTER=0
+
     # reload config
     writelog "I" "(Re-)Reading config file..."
   	
@@ -310,12 +463,12 @@ read_config() {
 	CHECKHOSTS_DEEPSLEEP="$CHECKHOSTS_DEEPSLEEP "
 	CHECKHOSTS_DEEPSLEEP=$(string_to_lower "$CHECKHOSTS_DEEPSLEEP")
 
-	read_config_value "CHECKHOSTS_IGNORE_MULTI_HOSTNAMES" "1" "if set ignore all names except the first one (valaue: 0/1)" 1 1
+	read_config_value "CHECKHOSTS_IGNORE_MULTI_HOSTNAMES" 1 "if set ignore all names except the first one (valaue: 0/1 [1])" 1 1
 
 	read_config_value "MYNAME" "$MY_HOSTNAME" "cutsomizable hostname of executing NAS (used in notifications) (valaue: $)" 1 1
-	read_config_value "ACTIVE_STATUS" "1" "active status of this script (for manual deactivation) (value: 0/1)" 1 1
-	read_config_value "DEBUG_MODE" "0" "debug mode (outut of debug messages to stdout and log) (value: 0/1)" 1 1
-	read_config_value "USE_INTERACTIVE_COLOR" "1" "use color codes in interactive/console mode (value: 0/1)" 1 1
+	read_config_value "ACTIVE_STATUS" 1 "active status of this script (for manual deactivation) (value: 0/1 [1])" 1 1
+	read_config_value "DEBUG_MODE" 0 "debug mode (outut of debug messages to stdout and log) (value: 0/1 [0])" 1 1
+	read_config_value "USE_INTERACTIVE_COLOR" 1 "use color codes in interactive/console mode (value: 0/1 [1])" 1 1
 
 	# Color codes
 	#Black        0;30     Dark Gray     1;30
@@ -332,13 +485,13 @@ read_config() {
 	read_config_value "COLOR_DEBUG" "\033[1;30m" "color code for debug classification (value: $)" 0 1
 	read_config_value "COLOR_PID" "\033[0;35m" "color code for process id" 0 1
 
-	read_config_value "SLEEP_TIMER" 60 "wating time (loop) to check clients again (value: #)" 1 1
-	read_config_value "SLEEP_MAXLOOP" 30 "number of max loops (value: #)" 1 1
-	read_config_value "GRACE_TIMER" 20 "start grace period after x loops (value: #)" 1 1
+	read_config_value "SLEEP_TIMER" 60 "wating time (loop) to check clients again (value: # [60])" 1 1
+	read_config_value "SLEEP_MAXLOOP" 30 "number of max loops (value: # [30])" 1 1
+	read_config_value "GRACE_TIMER" 20 "start grace period after x loops (value: # [20])" 1 1
 
-	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines (value: #)" 1 1
-	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days (value: #)" 1 1
-	read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $)" 1 1
+	read_config_value "LOGFILE_MAXLINES" 1000 "limit log file to number of lines (value: # [1000])" 1 1
+	read_config_value "LOGFILE_CLEANUP_DAYS" 3 "clean log files older than x days (value: # [3])" 1 1
+	read_config_value "LOGFILE_FILENAME" "autoshutdown.log" "define log filename; placeholder optionally (#DATETIME#) (value: $ [autoshutdown.log])" 1 1
 	LOGFILE=$(replace_logfilename_placeholder $LOGFILE_FILENAME)
 	LOGFILE=$THISDIR/$LOGFILE
 	read_config_value "SCRIPT_DEV_FILENAME" "autoshutdown.sh.txt" "define script filename for edited version (copies from this file to running script at start of loop; prevents text file busy errors) (value: $)" 1 1
@@ -347,16 +500,19 @@ read_config() {
 	read_config_value "IFTTT_KEY" "" "IFTTT magic key for webhook notifications (value: $)" 0 1
 	read_config_value "IFTTT_EVENT" "" "IFTTT event name for notifications (value: $)" 1 1
 
-	read_config_value "SHUTDOWN_BEEP" 1 "beep system loudspeaker if shutting down (value: 0/1)" 1 1
-	read_config_value "SHUTDOWN_BEEP_COUNT" 5 "number of beeps at shutdown (value: #)" 1 1
- 	read_config_value "GRACE_BEEP" 1 "beep system loudspeaker if in grace period (value: 0/1)" 1 1
-	read_config_value "GRACE_BEEP_COUNT" 1 "number of beeps in grace period (value: #)" 1 1
+	read_config_value "SHUTDOWN_BEEP" 1 "beep system loudspeaker if shutting down (value: 0/1 [1])" 1 1
+	read_config_value "SHUTDOWN_BEEP_COUNT" 5 "number of beeps at shutdown (value: # [5])" 1 1
+ 	read_config_value "GRACE_BEEP" 1 "beep system loudspeaker if in grace period (value: 0/1 [1])" 1 1
+	read_config_value "GRACE_BEEP_COUNT" 1 "number of beeps in grace period (value: # [1])" 1 1
 
-	read_config_value "NOTIFY_ON_GRACE_START" 1 "send notification on start of grace period (value: 0/1)" 1 1
-	read_config_value "NOTIFY_ON_GRACE_EVERY" 5 "send notification in grace period (value: #)" 1 1
-	read_config_value "NOTIFY_ON_SHUTDOWN" 1 "send notification on shutdown (value: 0/1)" 1 1
-	read_config_value "NOTIFY_ON_LONGRUN_EVERY" 180 "send notification if system is running a long time (value: #)" 1 1
-	read_config_value "NOTIFY_ON_STATUS_CHANGE" 1 "send notification if status of connected system changes (value: 0/1)" 1 1
+	read_config_value "NOTIFY_ON_GRACE_START" 1 "send notification on start of grace period (value: 0/1 [1])" 1 1
+	read_config_value "NOTIFY_ON_GRACE_EVERY" 5 "send notification in grace period (value: # [5])" 1 1
+	read_config_value "NOTIFY_ON_SHUTDOWN" 1 "send notification on shutdown (value: 0/1 [1])" 1 1
+	read_config_value "NOTIFY_ON_LONGRUN_EVERY" 180 "send notification if system is running a long time (value: # [180])" 1 1
+	read_config_value "NOTIFY_ON_STATUS_CHANGE" 1 "send notification if status of connected system changes (value: 0/1 [1])" 1 1
+
+	read_config_value "DSM_NOTIFY_ON_STATUS_CHANGE" 1 "send Synology DSM notification if status of connected system changes (value: 0/1 [1])" 1 1
+
 
  	read_config_value "MESSAGE_SLEEP" "System will be shut down now..." "notification message if system is shutting down (valaue: $)" 1 1
  	read_config_value "MESSAGE_GRACE_START" "System will be shut down soon..." "notification message if grace periods starts (valaue: $)" 1 1
@@ -366,15 +522,15 @@ read_config() {
  	read_config_value "MESSAGE_STATUS_CHANGE_INV" "No systems found, starting monitoring mode..." "notification message if no valid systems are found (valaue: $)" 1 1
  	read_config_value "MESSAGE_LAST_SYSTEM_DEEPSLEEP" "Remaining valid system seems to be in deep sleep mode. Continuing checks.." "notification message if remaining system is possible in deep sleep mode (valaue: $)" 1 1
  
-	read_config_value "NETWORK_USAGE_INTERFACE" "eth0" "network interface of NAS to be checked (e.g. eth0, eth1, bond0,...) (valaue: $)" 1 1
-	read_config_value "NETWORK_USAGE_INTERFACE_MIN_BYTES" 1000 "Less than x bytes per second for low bandwidth (valaue: #)" 1 1
-	read_config_value "NETWORK_USAGE_INTERFACE_MAX_BYTES" 5000 "More than x bytes per second for high bandwidth (valaue: #)" 1 1
-	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage (valaue: #)" 1 1
-	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage (valaue: #)" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE" "eth0" "network interface of NAS to be checked (e.g. eth0, eth1, bond0,...) (valaue: $ [eth0])" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MIN_BYTES" 1000 "Less than x bytes per second for low bandwidth (valaue: # [1000])" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_MAX_BYTES" 5000 "More than x bytes per second for high bandwidth (valaue: # [5000])" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES" 10 "number of probes to calculate active usage (valaue: # [10])" 1 1
+	read_config_value "NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" 7 "number of positive probes to identify active usage (valaue: # [7])" 1 1
 
-	read_config_value "WEBSERVER_SHUTDOWN_ACTIVE" 0 "set own shutdown webserver active (valaue: 0/1)" 1 1
-	read_config_value "WEBSERVER_SHUTDOWN_PORT" 8080 "port number of shutdown webserver (valaue: #)" 1 1
-	read_config_value "WEBSERVER_SHUTDOWN_PORT_EXTERNAL" 48080 "external port number of shutdown webserver (valaue: #)" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_ACTIVE" 0 "set own shutdown webserver active (valaue: 0/1 [0])" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_PORT" 8080 "port number of shutdown webserver (valaue: # [8080" 1 1
+	read_config_value "WEBSERVER_SHUTDOWN_PORT_EXTERNAL" 48080 "external port number of shutdown webserver (valaue: # [48080])" 1 1
 	read_config_value "WEBSERVER_SHUTDOWN_URL" "shutdown" "path of shutdown webserver to execute shutdown (without prefix slash) (valaue: $)" 1 1
 	read_config_value "WEBSERVER_TEST_URL" "test" "path of webserver to test functionality (without prefix slash) (valaue: $)" 1 1
 	read_config_value "WEBSERVER_SHUTDOWN_SCRIPT" "autoshutdown_webserver.py" "path of shutdown webserver (valaue: $)" 1 1
@@ -382,12 +538,21 @@ read_config() {
 	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN_START" "Shutdown Websever initialized..." "notification message if webserver is initialized (valaue: $)" 1 1
 	read_config_value "MESSAGE_WEBSERVER_SHUTDOWN" "Shutdown of system initialized by webserver" "notification message if shutdown initialized by webserver (valaue: $)" 1 1
 	read_config_value "WEBSERVER_MAGICKEY" "$MY_WEBSERVER_MAGICKEY_GENERATED" "Permanent magic key to access websever by IFTTT; sync with web request URL in receipe (value: $)" 0 1
-	read_config_value "WEBSERVER_MAGICWORD" "abracadabra" "Permanent magic word to access websever by IFTTT; advice: change this to sometineg else (value: $)" 0 1
+	read_config_value "WEBSERVER_MAGICWORD" "abracadabra" "Permanent magic word to access websever by IFTTT; advice: change this to sometineg else (value: $ )" 0 1
 
-	read_config_value "WEBSERVER_RESET_URL" "reset" "path of shutdown webserver to reset forced shutdown (without prefix slash) (valaue: $)" 0 1
-	read_config_value "RESET_TRIGGER_FILE" "autoshutdown.reset" "file name of trigger file to reset forced shutdown (without prefix slash) (valaue: $)" 0 1
-	read_config_value "FORCE_SHUTDOWN_TIMER_NOTIFY" "200" "send notification before forced shutdown is executed after cycles (value: #)" 0 1
-	read_config_value "FORCE_SHUTDOWN_TIMER_EXECUTE" "205" "execute forced shutdown after cycles (value: #)" 0 1
+	read_config_value "WEBSERVER_DMSS_RESET_URL" "reset" "path of webserver to deadman's switch (DMSS) functionality (without prefix slash) (valaue: $ [reset])" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.WEBSERVER_DMSS_RESET_URL" "reset" "path of webserver to deadman's switch (DMSS) functionality (without prefix slash) (valaue: $ [reset])" 1 1
+	read_config_value "DMSS_GRACE_EVERY" 300 "send desadman's switch (DMSS) link if system is running a long time (value: # [300}])" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.DMSS_GRACE_EVERY" 300 "send desadman's switch (DMSS) link if system is running a long time (value: # [300}])" 1 1
+	read_config_value "DMSS_EXECUTE_AFTER_GRACE" 5 "execute desadman's switch (DMSS) if user is not responding (value: # [5])" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.DMSS_EXECUTE_AFTER_GRACE" 5 "execute desadman's switch (DMSS) if user is not responding (value: # [5])" 1 1
+	read_config_value "DMSS_RESET_FILENAME" "autoshutdown.reset" "filename to reset desadman's switch (DMSS) if user is responding (value: # [5])" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.DMSS_RESET_FILENAME" "autoshutdown.reset" "filename to reset desadman's switch (DMSS) if user is responding (value: # [5])" 1 1
+
+	read_config_value "MESSAGE_DMSS_NOTIFY" "System is going to be shutdown if not resetted. To reset click here: #WEBSERVER_URL_DMSS_RESET#" "Notification to reset deadman's switch (DMSS) (value: $)" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.MESSAGE_DMSS_NOTIFY" "System is going to be shutdown if not resetted. To reset click here: #WEBSERVER_URL_DMSS_RESET#" "Notification to reset deadman's switch (DMSS) (value: $)" 1 1
+	read_config_value "MESSAGE_DMSS_EXECUTE_NOTIFY" "System is going to be shutdown by deadman's switch NOW" "Notification abaount execution of deadman's switch (DMSS) (value: $)" 1 1
+	ini_val "${CONFIGFILE_INI}" "DMSS.MESSAGE_DMSS_EXECUTE_NOTIFY" "System is going to be shutdown by deadman's switch NOW" "Notification abaount execution of deadman's switch (DMSS) (value: $)" 1 1
 
 	# after each config (re)load the webserver has to be starten
 	# ########################################################
@@ -549,18 +714,21 @@ replace_placeholder()
 	# note: loops * sleep_time
 	local RUNLOOP_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
 	retvar=${retvar//#RUNLOOP_TIME#/$RUNLOOP_TIME}
-	local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
-	local RUNLOOP_TIME_DAYS=$((RUNLOOP_TIME_SECS/60/60/24))
-    local RUNLOOP_TIME_HOURS=$((RUNLOOP_TIME_SECS/60/60%24))
-    local RUNLOOP_TIME_MINS=$((RUNLOOP_TIME_SECS/60%60))
-    local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
-	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
+	#local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME))
+	#local RUNLOOP_TIME_DAYS=$(((RUNLOOP_TIME_SECS/60*60)/24))
+    #local RUNLOOP_TIME_HOURS=$(((RUNLOOP_TIME_SECS/60*60)%24))
+    #local RUNLOOP_TIME_MINS=$(((RUNLOOP_TIME_SECS/60)%60))
+    #local RUNLOOP_TIME_SECS=$((RUNLOOP_TIME_SECS%60))
+	#retvar=${retvar//#RUNLOOP_TIME_HUMAN#/${RUNLOOP_TIME_DAYS}d:${RUNLOOP_TIME_HOURS}h:${RUNLOOP_TIME_MINS}m:${RUNLOOP_TIME_SECS}s}
+	RUNLOOP_SECONDS_HUMAN=$(sec_to_time "$RUNLOOP_TIME" "long")
+	retvar=${retvar//#RUNLOOP_TIME_HUMAN#/$RUNLOOP_SECONDS_HUMAN}
 
-	local SYS_UPTIME_HUMAN=$(awk '{print int($1/3600)"h:"int(($1%3600)/60)"m:"int($1%60)"s"}' /proc/uptime)
+	local SYS_UPTIME=$(awk '{print int($1)}' /proc/uptime)
+	SYS_UPTIME_HUMAN=$(sec_to_time $SYS_UPTIME "long")
 	retvar=${retvar//#SYS_UPTIME_HUMAN#/$SYS_UPTIME_HUMAN}
 
-	retvar=${retvar//#SHUTDOWN_LINK_USER#/$SHUTDOWN_LINK_USER}
-	retvar=${retvar//#SHUTDOWN_LINK_HA#/$SHUTDOWN_LINK_HA}
+	retvar=${retvar//#WEBSERVER_URL_SHUTDOWN#/http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL}
+	retvar=${retvar//#WEBSERVER_URL_DMSS_RESET#/http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_DMSS_RESET_URL}
 
 	echo "$retvar"
 }
@@ -623,6 +791,26 @@ writelog()
 }
 
 #######################################
+# Send notification to Synology DSM
+# Globals:
+#	-
+# Arguments:
+#	$1: Message
+# Returns:
+#   -
+#######################################
+dsm_notification()
+{
+	local MY_MESSAGE=$1
+
+	DSMNOTIFY_EXISTS=$(command -v synodsmnotify|wc -l)
+	if [ $DSMNOTIFY_EXISTS -eq 1 ]; then
+		writelog "I" "DSM notification sent"
+		synodsmnotify "@administrators" "$APP_NAME" "$MY_MESSAGE"
+	fi
+}
+
+#######################################
 # Send notification to IFTTT
 # Globals:
 #   $IFTTT_KEY
@@ -641,13 +829,15 @@ notification()
 	if [ "x$IFTTT_KEY" != "x" ]; then
 		if [ "x$IFTTT_EVENT" != "x" ]; then
 			if [ "x$MY_IDENTIFIER" != "x" ]; then
-				writelog "D" "Notification NAME  : $MY_IDENTIFIER"
-				writelog "D" "Notification STATUS:$MY_MESSAGE"
-				writelog "D" "Notification EVENT :$IFTTT_EVENT"
-				writelog "D" "Notification KEY   : $IFTTT_KEY"
+				writelog "D" "IFTTT Notification NAME  : $MY_IDENTIFIER"
+				writelog "D" "IFTTT Notification STATUS:$MY_MESSAGE"
+				writelog "D" "IFTTT Notification EVENT :$IFTTT_EVENT"
+				writelog "D" "IFTTT Notification KEY   : $IFTTT_KEY"
 				writelog "D" "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"} https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY"
-				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY >/dev/null 2>&1
-				writelog "I" "Notification sent: $MY_MESSAGE"
+				curl -X POST -H "Content-Type: application/json" -d "{\"value1\":\"$APP_NAME: $MY_IDENTIFIER - $MY_MESSAGE\"}" https://maker.ifttt.com/trigger/$IFTTT_EVENT/with/key/$IFTTT_KEY >/dev/null 2>&1
+				writelog "I" "IFTTT Notification sent: $MY_MESSAGE"
+
+				dsm_notification "$MY_MESSAGE"
 			else
 				writelog "E" "No notification message stated. Notification aborted."
 			fi
@@ -718,7 +908,7 @@ is_network_in_use() {
 restart_loop() {
 	# reset counter
 	MAXLOOP_COUNTER=0
-	writelog "W" "$FOUND_SYSTEMS marker systems found. Resetting loop."
+	writelog "I" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 	### Trim whitespaces ###
 	VALID_MARKER_SYSTEMS_LIST=$(echo $VALID_MARKER_SYSTEMS_LIST | sed -e 's/^[[:space:]]*//')
 	# replace spaces with ", "
@@ -746,9 +936,10 @@ notify_restart_loop() {
 		writelog "I" "--> status change (not found -> found)"
 			# only send notification after first loop
 			if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+				RETURN_VAR=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_VAL")
 				writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_VAL)"
-				notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_VAL"
-				writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_VAL"
+				notification "$MYNAME" "$RETURN_VAR"
+				writelog "I" "Notification sent: $RETURN_VAR"
 			fi
 		fi
 	fi
@@ -774,15 +965,15 @@ LOGFILE=$THISDIR/$LOGFILE
 
 # ########################################################
 # # INTRO HEADER
-writelog "W" "################################################################################"
+writelog "I" "################################################################################"
 writelog "I" "#####"
-writelog "W" "##### autoshutdown.sh  for Synology-NAS"
+writelog "I" "##### $APP_NAME"
 writelog "I" "#####"
 writelog "I" "##### Version $APP_VERSION, $APP_DATE"
 writelog "I" "##### $APP_SOURCE"
 writelog "I" "##### Licensed under APLv2"
 writelog "I" "#####"
-writelog "W" "################################################################################"
+writelog "I" "################################################################################"
 writelog "I" "base directory: $THISDIR"
 writelog "I" "own primary ip: $MY_PRIMARY_IP"
 writelog "I" "scan ip range : $MY_SCAN_RANGE.*"
@@ -832,6 +1023,7 @@ fi
 # cleanup hash file (create new configfile)
 rm $HASHFILE
 # main loop
+
 while true; do
 	if [ ! -f "$CONFIGFILE" ]; then
 		# no config file found; check every loop to get sure, the function is executable
@@ -846,16 +1038,45 @@ while true; do
 
 	FOUND_SYSTEMS=0
 	VALID_MARKER_SYSTEMS_LIST=""
-	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
-	RUNLOOP_MOD=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
 
-	if [ $RUNLOOP_MOD -eq 0 ];then
+	RUNLOOP_COUNTER=$((RUNLOOP_COUNTER+1))
+	RUNLOOP_MODULA=$((RUNLOOP_COUNTER % NOTIFY_ON_LONGRUN_EVERY))
+	if [ $RUNLOOP_MODULA -eq 0 ];then
 		writelog "I" "Sending notification (MESSAGE_LONGRUN)"
 
 		MESSAGE_LONGRUN_NOTIFY=$(replace_placeholder "$MESSAGE_LONGRUN")
 		notification "$MYNAME" "$MESSAGE_LONGRUN_NOTIFY"
 		writelog "I" "Notification sent: $MESSAGE_LONGRUN_NOTIFY"
 	fi
+
+	DMSS_MODULA=$((RUNLOOP_COUNTER % DMSS_GRACE_EVERY))
+	if [ $DMSS_ACTIVE -eq 0 ]; then
+		# if DMSS is inactive
+		if [ $DMSS_MODULA -eq 0 ];then
+			writelog "I" "Sending notification (MESSAGE_DMSS)"
+
+			MESSAGE_DMSS=$(replace_placeholder "$MESSAGE_DMSS_NOTIFY")
+			notification "$MYNAME" "$MESSAGE_DMSS"
+			writelog "I" "Notification sent: $MESSAGE_DMSS"
+			DMSS_ACTIVE=1
+		fi
+	else
+		# if DMSS is active
+		DMSS_ACTIVE_COUNTER=$((DMSS_ACTIVE_COUNTER+1))
+		writelog "D" "Check file exists: $THISDIR/$DMSS_RESET_FILENAME"
+		if [ -f "$THISDIR/$DMSS_RESET_FILENAME" ]; then
+			writelog "I" "Forced shutdown grace timer was reset by user"
+			rm $THISDIR/$DMSS_RESET_FILENAME
+			DMSS_ACTIVE=0
+			DMSS_ACTIVE_COUNTER=0
+		fi
+		if [ $DMSS_ACTIVE_COUNTER -ge $DMSS_EXECUTE_AFTER_GRACE ]; then
+			notification "$MYNAME" "$MESSAGE_DMSS_EXECUTE_NOTIFY"
+			writelog "W" "System is going to be shutdown by deadman's switch"
+			poweroff
+		fi
+	fi
+
 
 	if [ $ACTIVE_STATUS != "1" ]; then
 		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
@@ -979,9 +1200,10 @@ while true; do
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
 					# only send notification after first loop
 					if [ $NOTIFY_ON_STATUS_CHANGE -eq "1" ];then
+						RETURN_VAR=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_INV")
 						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_INV)"
-						notification "$MYNAME" "$MESSAGE_STATUS_CHANGE_INV"
-						writelog "I" "Notification sent: $MESSAGE_STATUS_CHANGE_INV"
+						notification "$MYNAME" "$RETURN_VAR"
+						writelog "I" "Notification sent: $RETURN_VAR"
 					fi
 				fi
 			fi
@@ -1018,17 +1240,37 @@ while true; do
 				beeps $GRACE_BEEP_COUNT
 			fi
 		fi
+
 		# summary
 		RUNLOOP_COUNTER_TIME=$((RUNLOOP_COUNTER*SLEEP_TIMER))
+		RUNLOOP_COUNTER_HRF=$(sec_to_time "$RUNLOOP_COUNTER_TIME" "long")
+
+		SYS_UPTIME_SECONDS=$(awk '{print int($1)}' /proc/uptime)
+		SYS_UPTIME_HUMAN=$(sec_to_time $SYS_UPTIME_SECONDS "long")
 
 		writelog "I" "#####################################################"
-		writelog "I" "#####                                                "
-		writelog "I" "#####        S H U T D O W N  C O U N T E R          "
-		writelog "I" "#####                                                "
-		writelog "I" "#####                   checks: $RUNLOOP_COUNTER = $RUNLOOP_COUNTER_TIME sec."
-		writelog "I" "#####                   modula: $RUNLOOP_MOD / $NOTIFY_ON_LONGRUN_EVERY"
-		writelog "I" "#####                   loop: $MAXLOOP_COUNTER / max: $SLEEP_MAXLOOP"
-		writelog "I" "#####                                                "
+		writelog "I" "#####"
+		writelog "I" "#####  ===== S U M M A R Y (last cycle) ====="
+		writelog "I" "#####"
+		writelog "I" "##### System uptime:"
+		writelog "I" "#####     $SYS_UPTIME_HUMAN"
+		writelog "I" "#####"
+		writelog "I" "##### Overall elapsed cycles:"
+		writelog "i" "#####     $RUNLOOP_COUNTER cycle(s) since script (re-)start"
+		writelog "I" "#####     $RUNLOOP_COUNTER_HRF ($RUNLOOP_COUNTER_TIME secs.)"
+		writelog "I" "#####"
+		writelog "I" "##### Inactive system loop cycles:"
+		writelog "I" "#####     $FOUND_SYSTEMS valid marker system(s) found"
+		writelog "I" "#####     $MAXLOOP_COUNTER cycles of max $SLEEP_MAXLOOP cycles "
+		writelog "I" "#####"
+		writelog "I" "##### Long running cycle checks:"
+		writelog "I" "#####     $RUNLOOP_MODULA (modula) cycle(s) of every $NOTIFY_ON_LONGRUN_EVERY cycles"
+		writelog "I" "#####"
+		writelog "I" "##### Deadman's switch:"
+		writelog "I" "#####     $DMSS_MODULA (modula) cycle(s) of every $DMSS_GRACE_EVERY cycles"
+		writelog "I" "#####     DMSS active: $DMSS_ACTIVE"
+		writelog "I" "#####     $DMSS_ACTIVE_COUNTER grace cycle(s) of max $DMSS_EXECUTE_AFTER_GRACE cycle(s)"
+		writelog "I" "#####"
 		writelog "I" "#####################################################"
 
 		# check if loop > maxloop?
@@ -1056,6 +1298,8 @@ while true; do
 #			fi
 		fi
 		writelog "I" "Waiting for next check in $SLEEP_TIMER seconds..."
+		writelog "I" ""
+		writelog "I" ""
 	fi
 	
 	# sleep till next loop
