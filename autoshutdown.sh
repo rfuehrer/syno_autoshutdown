@@ -384,6 +384,11 @@ read_config() {
 	read_config_value "WEBSERVER_MAGICKEY" "$MY_WEBSERVER_MAGICKEY_GENERATED" "Permanent magic key to access websever by IFTTT; sync with web request URL in receipe (value: $)" 0 1
 	read_config_value "WEBSERVER_MAGICWORD" "abracadabra" "Permanent magic word to access websever by IFTTT; advice: change this to sometineg else (value: $)" 0 1
 
+	read_config_value "WEBSERVER_RESET_URL" "reset" "path of shutdown webserver to reset forced shutdown (without prefix slash) (valaue: $)" 0 1
+	read_config_value "RESET_TRIGGER_FILE" "autoshutdown.reset" "file name of trigger file to reset forced shutdown (without prefix slash) (valaue: $)" 0 1
+	read_config_value "FORCE_SHUTDOWN_TIMER_NOTIFY" "200" "send notification before forced shutdown is executed after cycles (value: #)" 0 1
+	read_config_value "FORCE_SHUTDOWN_TIMER_EXECUTE" "205" "execute forced shutdown after cycles (value: #)" 0 1
+
 	# after each config (re)load the webserver has to be starten
 	# ########################################################
 	# # WEBSERVER START

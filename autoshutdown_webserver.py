@@ -39,10 +39,15 @@ class MyHandler(BaseHTTPRequestHandler):
             print("test_function got called")
             self.wfile.write("Webserver test mode is working...")
 
+        if self.path == my_spath:
+            # self.wfile.write("<p align='center'><font size='32'><a href='"+my_apath+"'>execute shutdown now</a></font><p>")
+            os.mknod("autoshutdown.reset")
+
 parser = argparse.ArgumentParser(description='Synology Autoshutdown Webserver!')
 parser.add_argument("--port", default=8080, type=int, help="Port of webserver")
 parser.add_argument("--spath", default="/shutdown", type=str, help="Shutdown path of shutdown listener")
 parser.add_argument("--tpath", default="/test", type=str, help="Test path of shutdown listener")
+parser.add_argument("--rpath", default="/reset", type=str, help="Reset force shutdown path of shutdown listener")
 parser.add_argument("--magickey", type=str, help="Magic key of shutdown listener")
 parser.add_argument("--magicword", type=str, help="Magic word of shutdown listener")
 parser.add_argument("--uuid", required=True, type=str, help="UUID of shutdown listener")
@@ -52,6 +57,7 @@ args = parser.parse_args()
 my_apath = "/" + args.uuid + "/"+ args.spath +"-action"
 my_spath = "/" + args.uuid + "/"+ args.spath
 my_tpath = "/" + args.uuid + "/"+ args.tpath
+my_rpath = "/" + args.uuid + "/"+ args.rpath
 my_magickey=args.magickey
 my_magicword=args.magicword
 my_magic_happens = "/" +my_magickey+"/" + my_magicword
