@@ -377,7 +377,8 @@ read_config_value(){
 	if grep -q "^$MY_VAR" "$CONFIGFILE"
 	then
 		# string found
-		RET=$(cat "$CONFIGFILE" | grep "^$MY_VAR=" | cut -d= -f2)
+#		RET=$(cat "$CONFIGFILE" | grep "^$MY_VAR=" | cut -d= -f2)
+		RET=$(grep "^$MY_VAR=" "$CONFIGFILE" | cut -d= -f2)
 #		: "${ACTIVE_STATUS:=1}"
 		if [ "$RET" == "" ];then
 			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No config value '$MY_VAR' in config file. Setting default value '$MY_DEFAULT'."
@@ -656,7 +657,7 @@ beeps() {
 	local BEEPS_NUM
 	BEEPS_NUM="$1"
 	
-	for i in {1..$BEEPS_NUM}
+	for ((i=0; i<BEEPS_NUM; i++))
 	do
 		writelog "I" "Beep."
 		echo 2 > /dev/ttyS1
@@ -883,17 +884,14 @@ is_network_in_use() {
         BYTES_DIFF=$((BYTES-BYTES_SAVE))
         DIFF_CODE="NORMAL"
         if [ "$BYTES_DIFF" -gt "$BYTES_DIFF_MAX" ]; then
-            BYTES_DIFF_MAX=$BYTES_DIFF
+			:
         fi
         if [ "$BYTES_DIFF" -lt "$NETWORK_USAGE_INTERFACE_MIN_BYTES" ];then
-            DIFF_CODE="  LOW"
+			:
         fi
         if [ "$BYTES_DIFF" -gt "$NETWORK_USAGE_INTERFACE_MAX_BYTES" ];then
-            DIFF_CODE=" HIGH "
             COUNT_HIGH=$((COUNT_HIGH+1))
         fi
-        #echo "$BYTES ($BYTES_DIFF) $DIFF_CODE (max: $BYTES_DIFF_MAX)"
-        #echo "$BYTES ($BYTES_DIFF) $DIFF_CODE (max: $BYTES_DIFF_MAX)" >>/volume1/control/syno_autoshutdown/net.txt
         sleep 1
     done
     if [ "$COUNT_HIGH" -ge "$NETWORK_USAGE_INTERFACE_PROBES_POSITIVE" ]; then
@@ -1018,11 +1016,11 @@ OPT_KILLALL=0
 while true ; do
     case "$1" in
         -v|--verbose)
+			OPT_VERBOSE=1
             case "$2" in
                 "") ARG_A='some default value' ; shift 2 ;;
                 *) ARG_A="$2" ; shift 2 ;;
             esac ;;
-        -v|--verbose) OPT_VERBOSE=1 ; shift ;;
         -k|--killall) OPT_KILLALL=1 ; shift ;;
 		-r|--resetlog) OPT_RESETLOG=1; shift;;
         --) shift ; break ;;
@@ -1118,8 +1116,9 @@ while true; do
 		do
 			# match marker systems with online systems (IP based)
 			# note: space is important to find this IP (CHECKHOSTS has an additional space at end)
-
-			if [[ "$CHECKHOSTS" =~ "$FOUND_IP " ]]; then
+			local pattern
+			pattern="$FOUND_IP[[:space:]]+"
+			if [[ $CHECKHOSTS =~ $pattern ]]; then
 #			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					# -----------------------------------------------
 					# IP check
@@ -1149,8 +1148,8 @@ while true; do
 				if [[ "$FOUND_SYS_LINES" -eq 1 ]]; then
 					# only accept single-line matches (unique hostnames)
 					if [ -n "$FOUND_SYS" ]; then
-						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr [:upper:] [:lower:])
-						FOUND_SYS=$(echo "$FOUND_SYS" | tr [:upper:] [:lower:])
+						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr '[:upper:]' '[:lower:]')
+						FOUND_SYS=$(echo "$FOUND_SYS" | tr '[:upper:]' '[:lower:]')
 						DUMMY="System '$FOUND_SYS' "
 						if grep -q "$FOUND_SYS" <<< "$CHECKHOSTS" ; then
 							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
