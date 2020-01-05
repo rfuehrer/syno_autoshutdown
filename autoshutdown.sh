@@ -164,7 +164,7 @@ init_webserver_shutdown(){
 #	SCRIPT_MODIFIED=$(check_hash_script_modified)
 #	if [ $SCRIPT_MODIFIED -eq 0 ]; then
 	# shutdown all previous instances
-	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep $WEBSERVER_SHUTDOWN_SCRIPT|wc -l)
+	WEBSERVER_INSTANCES=$(ps -ef|grep -v grep|grep "$WEBSERVER_SHUTDOWN_SCRIPT"|wc -l)
 	while [[ $WEBSERVER_INSTANCES -ne 0 ]]; do
 		writelog "I" "Kill all instances ($WEBSERVER_INSTANCES) of '$WEBSERVER_SHUTDOWN_SCRIPT'"
 		pkill -f "$WEBSERVER_SHUTDOWN_SCRIPT" >/dev/null 2>&1
@@ -389,7 +389,7 @@ read_config_value(){
 		if [ "$MY_INIT_CONFIG" != "0" ]; then
 			# string not found
 			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
-			echo "" >>"$CONFIGFILE"
+			echo >>"$CONFIGFILE"
 			echo "; [$MY_VAR] $MY_DESCRIPTION" >>"$CONFIGFILE"
 			echo "$MY_VAR=$MY_DEFAULT" >>"$CONFIGFILE"
 		fi
@@ -882,7 +882,6 @@ is_network_in_use() {
         #BYTES=$(ifconfig $NW_DEVICE|grep "TX bytes"|cut -d ":" -f 3|cut -d " " -f 1)
         BYTES=$(cat "/sys/class/net/$NETWORK_USAGE_INTERFACE/statistics/rx_bytes")
         BYTES_DIFF=$((BYTES-BYTES_SAVE))
-        DIFF_CODE="NORMAL"
         if [ "$BYTES_DIFF" -gt "$BYTES_DIFF_MAX" ]; then
 			:
         fi
@@ -1010,17 +1009,10 @@ DUMMY=$(find "$THISDIR/" -type f -mtime +$LOGFILE_CLEANUP_DAYS -name 'autoshutdo
 # ########################################################
 # # COMMANDLINE PARAMETER
 OPT_RESETLOG=0
-OPT_VERBOSE=0
 OPT_KILLALL=0
 # extract options and their arguments into variables.
 while true ; do
     case "$1" in
-        -v|--verbose)
-			OPT_VERBOSE=1
-            case "$2" in
-                "") ARG_A='some default value' ; shift 2 ;;
-                *) ARG_A="$2" ; shift 2 ;;
-            esac ;;
         -k|--killall) OPT_KILLALL=1 ; shift ;;
 		-r|--resetlog) OPT_RESETLOG=1; shift;;
         --) shift ; break ;;
@@ -1116,8 +1108,7 @@ while true; do
 		do
 			# match marker systems with online systems (IP based)
 			# note: space is important to find this IP (CHECKHOSTS has an additional space at end)
-			local pattern
-			pattern="$FOUND_IP[[:space:]]+"
+			pattern="${FOUND_IP}[[:space:]]+"
 			if [[ $CHECKHOSTS =~ $pattern ]]; then
 #			if grep -q "$FOUND_IP " <<< "$CHECKHOSTS"; then
 					# -----------------------------------------------
