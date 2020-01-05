@@ -580,7 +580,6 @@ read_config() {
 #   $MD5_HASHSCRIPT_SAVED
 #######################################
 check_pidhash(){
-
 	if [ -f "$SCRIPTFILE_DEV" ]; then
     	local MD5_HASHSCRIPT_DEV
 		MD5_HASHSCRIPT_DEV=$(md5sum "$SCRIPTFILE_DEV"| cut -d ' ' -f 1)
@@ -905,6 +904,23 @@ is_network_in_use() {
 }
 
 #######################################
+# Trim leading and trailing whitespaces
+# Globals:
+#   -
+# Arguments:
+#	$1 string to be un-whitespaced
+# Returns:
+#   un-whitespaced string 
+#######################################
+trim() {
+  local var
+  var="$1"
+  var="${var#"${var%%[![:space:]]*}"}" # trim leading whitespace chars
+  var="${var%"${var##*[![:space:]]}"}" # trim trailing whitespace chars
+  echo -n "$var"
+}
+
+#######################################
 # Restart loop if valid systems found
 # Globals:
 #   $FOUND_SYSTEMS
@@ -919,8 +935,9 @@ restart_loop() {
 	MAXLOOP_COUNTER=0
 	writelog "I" "$FOUND_SYSTEMS marker systems found. Resetting loop."
 	### Trim whitespaces ###
-	VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
-	# replace spaces with ", "
+	#VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
+	VALID_MARKER_SYSTEMS_LIST=$(trim "$VALID_MARKER_SYSTEMS_LIST")
+	# replace inner spaces with ", "
 	VALID_MARKER_SYSTEMS_LIST=${VALID_MARKER_SYSTEMS_LIST// /, }
 
 	local RET
@@ -1045,7 +1062,7 @@ while true; do
 	else
 	    read_config
 	fi
-    check_pidhash
+    check_pidhash ""
 
 	FOUND_SYSTEMS=0
 	VALID_MARKER_SYSTEMS_LIST=""
@@ -1132,8 +1149,8 @@ while true; do
 				if [[ "$FOUND_SYS_LINES" -eq 1 ]]; then
 					# only accept single-line matches (unique hostnames)
 					if [ -n "$FOUND_SYS" ]; then
-						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr '[A-Z]' '[a-z]')
-						FOUND_SYS=$(echo "$FOUND_SYS" | tr '[A-Z]' '[a-z]')
+						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr [:upper:] [:lower:])
+						FOUND_SYS=$(echo "$FOUND_SYS" | tr [:upper:] [:lower:])
 						DUMMY="System '$FOUND_SYS' "
 						if grep -q "$FOUND_SYS" <<< "$CHECKHOSTS" ; then
 							VALID_MARKER_SYSTEMS_LIST="$VALID_MARKER_SYSTEMS_LIST$FOUND_SYS "
@@ -1167,7 +1184,8 @@ while true; do
 				# -----------------------------------------------
 				# just one system in list?
 				# -----------------------------------------------
-				VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
+				#VALID_MARKER_SYSTEMS_LIST=$(echo "$VALID_MARKER_SYSTEMS_LIST" | sed -e 's/^[[:space:]]*//')
+				VALID_MARKER_SYSTEMS_LIST=$(trim "$VALID_MARKER_SYSTEMS_LIST")
 				if [[ $CHECKHOSTS_DEEPSLEEP =~ $VALID_MARKER_SYSTEMS_LIST ]]; then
 					# -----------------------------------------------
 					# just one last deep sleep system!
