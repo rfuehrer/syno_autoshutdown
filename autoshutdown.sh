@@ -194,7 +194,7 @@ init_webserver_shutdown(){
 		fi
 	done
 
-	if [ $WEBSERVER_INSTANCES -eq 0 ]; then
+	if [ "$WEBSERVER_INSTANCES" -eq 0 ]; then
 		writelog "W" "Failed to start webserver!"
 	else
 		writelog "I" "Shutdown webserver (external call) set to 'http://$MY_PUBLIC_IP:$WEBSERVER_SHUTDOWN_PORT_EXTERNAL/$MY_UUID/$WEBSERVER_SHUTDOWN_URL'"
@@ -395,7 +395,7 @@ read_config_value(){
 	fi
 
 	# set dynamic variable name to read content
-	eval $MY_VAR=\$RET
+	eval "$MY_VAR"=\$RET
 	[ "$MY_OUTPUT" == "1" ] && writelog "I" "Set variable '$MY_VAR' to value '$RET'"
 }
 
@@ -435,8 +435,10 @@ read_config_value(){
 #	$MESSAGE_STATUS_CHANGE_INV
 #######################################
 read_config() {
-  local MD5_HASH_SAVED=$(cat "$HASHFILE")
-  local MD5_HASH_CONFIG=$(md5sum "$CONFIGFILE"| cut -d ' ' -f 1)
+  local MD5_HASH_SAVED
+  MD5_HASH_SAVED=$(cat "$HASHFILE")
+  local MD5_HASH_CONFIG
+  MD5_HASH_CONFIG=$(md5sum "$CONFIGFILE"| cut -d ' ' -f 1)
   
   writelog "D" "Config hash : $MY_HOSTNAME : $CONFIGFILE"
   writelog "D" "Config hash - actual hash value: $MD5_HASH_CONFIG"
@@ -1087,7 +1089,7 @@ while true; do
 	fi
 
 
-	if [ $ACTIVE_STATUS -ne 1 ]; then
+	if [ "$ACTIVE_STATUS" -ne 1 ]; then
 		writelog "I" "Autoshutdown (temporary?) disabled. Waiting for next check in $SLEEP_TIMER seconds..."
 	else
 		writelog "I" "Checking systems (loop $MAXLOOP_COUNTER of $SLEEP_MAXLOOP; $SLEEP_TIMER seconds waiting time)"
@@ -1129,7 +1131,7 @@ while true; do
 				# check valid ip address (vs. multiple hostnames)
 				if [[ "$FOUND_SYS_LINES" -eq 1 ]]; then
 					# only accept single-line matches (unique hostnames)
-					if [ ! -z "$FOUND_SYS" ]; then
+					if [ -n "$FOUND_SYS" ]; then
 						CHECKHOSTS=$(echo "$CHECKHOSTS" | tr '[A-Z]' '[a-z]')
 						FOUND_SYS=$(echo "$FOUND_SYS" | tr '[A-Z]' '[a-z]')
 						DUMMY="System '$FOUND_SYS' "
@@ -1208,7 +1210,7 @@ while true; do
 				writelog "I" "--> status change (found -> not found)"
 				if [ $RUNLOOP_COUNTER -gt 1 ]; then
 					# only send notification after first loop
-					if [ $NOTIFY_ON_STATUS_CHANGE -eq 1 ];then
+					if [ "$NOTIFY_ON_STATUS_CHANGE" -eq 1 ];then
 						RETURN_VAR=$(replace_placeholder "$MESSAGE_STATUS_CHANGE_INV")
 						writelog "I" "Sending notification (MESSAGE_STATUS_CHANGE_INV)"
 						notification "$MYNAME" "$RETURN_VAR"
