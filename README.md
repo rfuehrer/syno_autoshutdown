@@ -27,6 +27,7 @@ A simple shell script to shutdown a Synology NAS if no authorized client is onli
       - [autoshutdown.hash](#autoshutdownhash)
       - [autoshutdown.pid](#autoshutdownpid)
       - [autoshutdown.pidhash](#autoshutdownpidhash)
+- [Acknowledgements](#acknowledgements)
 
 
 ## Purpose
@@ -167,6 +168,12 @@ IMPORTANT NOTE:
 The web server only uses security by obfuscation and no secure protection procedure against unauthorized calls. The use of this component must be evaluated individually. The module was designed to provide the functions as easily and quickly as possible via mobile end devices.
 ```
 
+```
+RECOMMENDATION:
+
+IFTTT auto shortening urls is activated by default. If notifications with links are sent the sortening service will call the URL which leads to an execution of the shutdown or reset function. We recommend to deactivate this function under your IFTTT settings.
+```
+
 In addition to the bash script, a python script is provided, which optionally starts a web service that allows the user to shut down the NAS system immediately via HTTP request.
 
 When the web server is started, a unique UUID is generated which can be used to control the web server. If the correct URL can be called by the user, the server is immediately shut down by calling another (confirmation) link.
@@ -238,10 +245,10 @@ Placeholders can be specified for messages in the configuration file. The follow
 #MY_PRIMARY_IP# : IP address of host running this script
 #RUNLOOP_COUNTER# : number of executed loops at all
 #RUNLOOP_TIME# : time of executed loops at all (RUNLOOP_COUNTER*SLEEP_TIME)
-#RUNLOOP_TIME_HUMAN# : Time of executed loops at all in format d:h:m:s
-#SYS_UPTIME_HUMAN# : Time since NAS startup in format h:m:s
-SHUTDOWN_LINK_USER : Link to shutdown system remotely
-SHUTDOWN_LINK_HA : +++DAGEROUS+++ Link to shutdown system directly via home automation/voice assistance 
+#RUNLOOP_TIME_HUMAN# : time of executed loops at all in format d:h:m:s
+#SYS_UPTIME_HUMAN# : time since NAS startup in format h:m:s
+#WEBSERVER_URL_SHUTDOWN# : http link to shutdown NAS manually
+#WEBSERVER_URL_DMSS_RESET# : http link to reset deadman's switch (forced shutdown)
 ```
 
 ### Log filename
@@ -267,3 +274,7 @@ File that contains the process ID of the running instance of the script.
 #### autoshutdown.pidhash
 
 File containing the hash value of a running shell script. This hash value is compared to the hash value of the saved shell script. If the values differ, the shell script has been changed and the script must be restarted. The running instance is terminated in the next cycle.
+
+# Acknowledgements
+
+The following sources have made this project possible, as the authors have provided impulses for the further development of this project.
