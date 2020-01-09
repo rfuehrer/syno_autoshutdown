@@ -390,7 +390,7 @@ read_config_value(){
 		if [ "$MY_INIT_CONFIG" != "0" ]; then
 			# string not found
 			[ "$MY_OUTPUT" == "1" ] && writelog "I" "No variable '$MY_VAR' found in config file. Initializing variable to config file."
-			{ echo ; echo "; [$MY_VAR] $MY_DESCRIPTION" >>"$CONFIGFILE" ; echo "$MY_VAR=$MY_DEFAULT" >>"$CONFIGFILE"; } >>"$CONFIGFILE"
+			{ echo ; echo "; [$MY_VAR] $MY_DESCRIPTION"; echo "$MY_VAR=$MY_DEFAULT"; } >>"$CONFIGFILE"
 		fi
 	fi
 
